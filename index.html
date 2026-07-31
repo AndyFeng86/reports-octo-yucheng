@@ -95,13 +95,42 @@ h1{text-align:center;font-size:22px;margin:10px 0 4px;background:linear-gradient
 .send-box .btn-copy{background:#07c160;color:#fff;border:none;padding:10px 16px;border-radius:6px;font-weight:700;cursor:pointer;font-size:13px}
 
 /* Admin panel */
-.admin-panel{background:#181b2e;border:2px solid #f59e0b;border-radius:12px;padding:16px;margin-bottom:20px;display:none}
+.admin-panel{background:#181b2e;border:2px solid #f59e0b;border-radius:12px;padding:16px;margin-bottom:20px}
 .admin-panel h3{font-size:15px;color:#f59e0b;margin-bottom:10px}
 .admin-panel textarea{width:100%;height:80px;background:#1e293b;border:1px solid #2a2f45;border-radius:6px;color:#e2e8f0;padding:10px;font-size:12px;resize:vertical}
 .admin-panel .btn-row{justify-content:flex-start;gap:8px}
 .btn-send{background:#f59e0b;color:#000;border:none;padding:10px 20px;border-radius:6px;font-weight:700;cursor:pointer;font-size:13px;flex:0}
 .btn-deploy{background:#3b82f6;color:#fff;border:none;padding:10px 20px;border-radius:6px;font-weight:700;cursor:pointer;font-size:13px;flex:0}
 .preview-box{background:#1e293b;border:1px solid #2a2f45;border-radius:8px;padding:12px;margin-top:8px;max-height:300px;overflow-y:auto;font-size:12px;color:#94a3b8;white-space:pre-wrap;display:none}
+
+/* Report list cards */
+.report-list{display:grid;gap:10px;margin-top:12px}
+.report-card-item{background:#1e293b;border:1px solid #2a2f45;border-radius:10px;padding:14px;cursor:pointer;transition:all .15s;position:relative}
+.report-card-item:hover{border-color:#3b82f6;background:#1e3a5f}
+.report-card-item .rci-date{font-size:11px;color:#64748b;margin-bottom:6px}
+.report-card-item .rci-title{font-size:14px;font-weight:700;color:#e2e8f0;margin-bottom:4px}
+.report-card-item .rci-tags{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px}
+.report-card-item .rci-tag{font-size:10px;padding:2px 8px;border-radius:4px;font-weight:600}
+.rci-tag.disc-d{background:#ef444422;color:#f87171}
+.rci-tag.disc-i{background:#f59e0b22;color:#fbbf24}
+.rci-tag.disc-s{background:#10b98122;color:#34d399}
+.rci-tag.disc-c{background:#3b82f622;color:#60a5fa}
+.rci-tag.parenting{background:#a855f722;color:#c084fc}
+.report-card-item .rci-scores{display:flex;gap:12px;font-size:12px}
+.report-card-item .rci-score{color:#94a3b8}
+.report-card-item .rci-score b{color:#f59e0b}
+.report-card-item .rci-delete{position:absolute;top:10px;right:10px;background:#ef444433;border:1px solid #ef4444;color:#f87171;width:24px;height:24px;border-radius:50%;font-size:11px;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.report-card-item .rci-delete:hover{background:#ef4444;color:#fff}
+.report-detail-overlay{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.8);z-index:9999;display:none;overflow-y:auto}
+.report-detail-overlay.active{display:block}
+.report-detail-box{max-width:680px;margin:20px auto;background:#0f1117;border-radius:12px;padding:20px;position:relative}
+.report-detail-close{position:fixed;top:20px;right:20px;width:40px;height:40px;background:#ef4444;color:#fff;border:none;border-radius:50%;font-size:18px;cursor:pointer;z-index:10001}
+.empty-tip{text-align:center;padding:40px 20px;color:#64748b;font-size:14px}
+ collapsible-section{border:1px solid #2a2f45;border-radius:8px;margin-top:12px}
+.collapsible-header{padding:10px 14px;background:#1e293b;border-radius:8px;cursor:pointer;font-size:13px;color:#94a3b8;display:flex;justify-content:space-between;align-items:center}
+.collapsible-header:hover{color:#e2e8f0}
+.collapsible-body{display:none;padding:12px}
+.collapsible-body.show{display:block}
 
 /* Tabs */
 .tabs{display:flex;gap:0;margin-bottom:20px}
@@ -250,28 +279,60 @@ function exportPDF() {
 <!-- Admin tab -->
 <div class="tab-content" id="tabAdmin">
   <div class="admin-panel" style="display:block">
-    <h3>📊 导师报告管理</h3>
-    <p style="font-size:13px;color:#94a3b8;margin-bottom:12px">家长完成测评后，报告自动存储在本地浏览器中。你也可以手动输入家长答题数据来生成报告。</p>
+    <h3>📊 测评报告管理</h3>
+    <p style="font-size:13px;color:#94a3b8;margin-bottom:12px">所有家长完成测评后的报告自动保存在下方列表，点击任意卡片可查看完整报告。</p>
 
     <div class="btn-row" style="margin-bottom:12px">
-      <button class="btn-send" onclick="viewStoredReports()">📋 查看已存储的报告</button>
-      <button class="btn-deploy" onclick="deployToWeCom()">📱 生成企微侧边栏部署代码</button>
+      <button class="btn-send" onclick="loadReportList()">🔄 刷新列表</button>
+      <button class="btn-deploy" onclick="exportAllReports()">📥 导出全部数据</button>
     </div>
 
-    <h4 style="font-size:14px;color:#94a3b8;margin:16px 0 8px">📝 手动输入家长答题数据（用于快速生成报告）</h4>
-    <p style="font-size:11px;color:#64748b;margin-bottom:8px">粘贴家长已完成的答案（JSON格式），直接生成报告。格式见下方按钮。</p>
-    <textarea id="adminAnswers" placeholder="粘贴家长答题JSON数据..."></textarea>
-    <div class="btn-row">
-      <button class="btn-send" onclick="adminGenerateFromJSON()">生成报告</button>
-      <button class="btn-send" style="background:#1e293b;color:#94a3b8" onclick="copyTemplateJSON()">复制JSON模板</button>
+    <div id="reportList" class="report-list"></div>
+
+    <div class="collapsible-section">
+      <div class="collapsible-header" onclick="toggleCollapsible(this)">
+        <span>📝 手动输入答题数据（展开）</span>
+        <span>▾</span>
+      </div>
+      <div class="collapsible-body">
+        <p style="font-size:11px;color:#64748b;margin-bottom:8px">粘贴家长已完成的答案（JSON格式），直接生成报告。</p>
+        <textarea id="adminAnswers" placeholder="粘贴家长答题JSON数据..."></textarea>
+        <div class="btn-row" style="margin-top:8px">
+          <button class="btn-send" onclick="adminGenerateFromJSON()">生成报告</button>
+          <button class="btn-send" style="background:#1e293b;color:#94a3b8" onclick="copyTemplateJSON()">复制JSON模板</button>
+        </div>
+      </div>
     </div>
 
-    <div class="preview-box" id="adminReportPreview"></div>
+    <div class="collapsible-section">
+      <div class="collapsible-header" onclick="toggleCollapsible(this)">
+        <span>📬 企微快捷回复模板（展开）</span>
+        <span>▾</span>
+      </div>
+      <div class="collapsible-body">
+        <div class="preview-box" id="quickReplyTemplates" style="display:block;max-height:200px"></div>
+      </div>
+    </div>
 
-    <h4 style="font-size:14px;color:#94a3b8;margin:16px 0 8px">📬 企微快捷回复模板</h4>
-    <p style="font-size:11px;color:#64748b;margin-bottom:8px">复制下方话术，在企微中快速发送给家长：</p>
-    <div class="preview-box" id="quickReplyTemplates" style="display:block"></div>
+    <div class="collapsible-section">
+      <div class="collapsible-header" onclick="toggleCollapsible(this)">
+        <span>📤 发送测评链接给家长（展开）</span>
+        <span>▾</span>
+      </div>
+      <div class="collapsible-body">
+        <div class="link-row">
+          <input type="text" id="shareLinkAdmin" readonly value="" placeholder="点击下方按钮生成链接">
+          <button class="btn-copy" onclick="copyShareLinkAdmin()">📋 复制链接</button>
+        </div>
+      </div>
+    </div>
   </div>
+</div>
+
+<!-- Report detail overlay -->
+<div class="report-detail-overlay" id="reportDetailOverlay">
+  <button class="report-detail-close" onclick="closeReportDetail()">✕</button>
+  <div class="report-detail-box" id="reportDetailBox"></div>
 </div>
 
 </div>
@@ -577,64 +638,207 @@ function copyShareLink() {
   });
 }
 
+function copyShareLinkAdmin() {
+  const input = document.getElementById('shareLinkAdmin');
+  if (!input) return;
+  input.value = getShareLink();
+  input.select();
+  navigator.clipboard.writeText(input.value).then(() => {
+    input.style.background = '#10b98122';
+    setTimeout(() => { input.style.background = '#1e293b'; }, 2000);
+  });
+}
+
 // 切换tab
 function switchTab(tab) {
   document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
   document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
   document.querySelectorAll('.tab').forEach(t => { if (t.textContent.includes(tab === 'client' ? '家长' : '导师')) t.classList.add('active'); });
   document.getElementById('tab' + (tab === 'client' ? 'Client' : 'Admin')).classList.add('active');
+  // 切换到导师端时自动加载报告列表
+  if (tab === 'admin') loadReportList();
 }
 
-// 查看已存储的报告
-function viewStoredReports() {
-  const preview = document.getElementById('adminReportPreview');
+// 折叠面板
+function toggleCollapsible(header) {
+  const body = header.nextElementSibling;
+  body.classList.toggle('show');
+  const arrow = header.querySelector('span:last-child');
+  arrow.textContent = body.classList.contains('show') ? '▴' : '▾';
+}
+
+// 加载报告列表
+function loadReportList() {
+  const container = document.getElementById('reportList');
   let reports = [];
   try { reports = JSON.parse(localStorage.getItem('familyDiagnosisReports') || '[]'); } catch(e) {}
+
   if (reports.length === 0) {
-    preview.style.display = 'block';
-    preview.textContent = '暂无报告。让家长完成测评后，报告会自动保存在这里。';
+    container.innerHTML = '<div class="empty-tip">📋 暂无测评报告<br><br>家长完成测评后，报告会自动出现在这里</div>';
     return;
   }
-  let html = `共 ${reports.length} 份报告：\n\n`;
-  reports.forEach((r,i) => {
+
+  let html = `<div style="font-size:13px;color:#94a3b8;margin-bottom:8px">共 <b style="color:#f59e0b">${reports.length}</b> 份报告（点击查看详情）</div>`;
+  reports.forEach((r, i) => {
     const d = new Date(r.date);
     const pDisc = discLabels[r.parentDiscResult.type];
     const cDisc = discLabels[r.childDiscResult.type];
     const pType = parentingLabels[r.parentingResult.type];
-    html += `【报告 ${i+1}】${d.toLocaleDateString('zh-CN')} ${d.toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit'})}\n`;
-    html += `家长：${pDisc.emoji} ${pDisc.name} | 教养：${pType.name}\n`;
-    html += `孩子：${cDisc.emoji} ${cDisc.name}\n`;
-    html += `教养匹配度：${r.match.matchScore}/100 | 知行一致度：${r.match.consistencyScore}/100 | 综合：${r.match.totalScore}/100\n\n`;
+    const matchL = scoreLevel(r.match.matchScore);
+    const consistL = scoreLevel(r.match.consistencyScore);
+    const totalL = totalLevel(r.match.totalScore);
+
+    html += `<div class="report-card-item" onclick="viewReportDetail(${i})">
+      <div class="rci-date">📅 ${d.toLocaleDateString('zh-CN')} ${d.toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit'})}</div>
+      <div class="rci-title">报告 #${i+1}</div>
+      <div class="rci-tags">
+        <span class="rci-tag disc-${r.parentDiscResult.type.toLowerCase()}">家长 ${pDisc.emoji} ${pDisc.name}</span>
+        <span class="rci-tag disc-${r.childDiscResult.type.toLowerCase()}">孩子 ${cDisc.emoji} ${cDisc.name}</span>
+        <span class="rci-tag parenting">${pType.name}</span>
+      </div>
+      <div class="rci-scores">
+        <span class="rci-score">匹配度: <b>${r.match.matchScore}</b></span>
+        <span class="rci-score">一致度: <b>${r.match.consistencyScore}</b></span>
+        <span class="rci-score">综合: <b>${r.match.totalScore}</b> ${totalL.label}</span>
+      </div>
+      <button class="rci-delete" onclick="deleteReport(event,${i})">✕</button>
+    </div>`;
   });
-  preview.style.display = 'block';
-  preview.textContent = html;
+  container.innerHTML = html;
+}
+
+// 查看报告详情
+function viewReportDetail(index) {
+  let reports = [];
+  try { reports = JSON.parse(localStorage.getItem('familyDiagnosisReports') || '[]'); } catch(e) {}
+  if (!reports[index]) return;
+
+  const r = reports[index];
+  // 用存储的数据重新生成报告HTML
+  const parentDisc = r.parentDiscResult;
+  const childDisc = r.childDiscResult;
+  const parenting = r.parentingResult;
+  const match = r.match;
+
+  const pDisc = discLabels[parentDisc.type];
+  const cDisc = discLabels[childDisc.type];
+  const pType = parentingLabels[parenting.type];
+  const matchL = scoreLevel(match.matchScore);
+  const consistL = scoreLevel(match.consistencyScore);
+  const totalL = totalLevel(match.totalScore);
+  const talk = matchTalk[parenting.type][childDisc.type];
+  const consistTalk = consistencyTalk[parentDisc.type][parenting.type];
+
+  let html = `<div class="report-header"><h2>📋 家庭教养匹配诊断报告</h2><p>测评日期：${new Date(r.date).toLocaleDateString('zh-CN')}</p></div>`;
+
+  // 家庭画像
+  html += `<div class="report-card"><h3>👨‍👩‍👧 家庭画像</h3><div class="profile-boxes">
+    <div class="profile-box"><div class="label">家长性格</div><div class="value">${pDisc.emoji} ${pDisc.name}</div></div>
+    <div class="profile-box"><div class="label">孩子性格</div><div class="value">${cDisc.emoji} ${cDisc.name}</div></div>
+    <div class="profile-box"><div class="label">教养方式</div><div class="value">${pType.name}</div></div>
+    <div class="profile-box"><div class="label">综合评级</div><div class="value">${totalL.label}</div></div>
+  </div></div>`;
+
+  // 分数
+  html += `<div class="report-card"><h3>📊 诊断分数</h3>
+    <div class="score-item"><div class="score-label">教养匹配度（教养方式 vs 孩子性格）</div><div style="display:flex;align-items:center"><div class="score-bar-bg" style="flex:1"><div class="score-bar-fill ${matchL.color}" style="width:${match.matchScore}%">${match.matchScore}</div></div><div class="score-value" style="color:#f59e0b">${match.matchScore}/100 ${matchL.label}</div></div></div>
+    <div class="score-item"><div class="score-label">知行一致度（家长性格 vs 教养方式）</div><div style="display:flex;align-items:center"><div class="score-bar-bg" style="flex:1"><div class="score-bar-fill ${consistL.color}" style="width:${match.consistencyScore}%">${match.consistencyScore}</div></div><div class="score-value" style="color:#f59e0b">${match.consistencyScore}/100 ${consistL.label}</div></div></div>
+    <div class="score-item"><div class="score-label">综合得分</div><div style="display:flex;align-items:center"><div class="score-bar-bg" style="flex:1"><div class="score-bar-fill ${totalL.color}" style="width:${match.totalScore}%">${match.totalScore}</div></div><div class="score-value" style="color:#f59e0b">${match.totalScore}/100 ${totalL.label}</div></div></div>
+  </div>`;
+
+  // 匹配分析
+  html += `<div class="report-card"><h3>🔍 匹配分析</h3><p class="analysis-text">${talk.analysis}</p>`;
+  if (talk.conflicts) {
+    html += '<p style="font-size:13px;color:#ef4444;margin:8px 0 4px">⚠ 典型冲突场景：</p><ul style="list-style:none;padding:0">';
+    talk.conflicts.forEach(c => { html += `<li style="font-size:12px;color:#94a3b8;margin-bottom:4px;padding-left:12px">• ${c}</li>`; });
+    html += '</ul>';
+  }
+  html += '</div>';
+
+  // 调整建议
+  html += `<div class="report-card"><h3>💡 调整建议</h3>`;
+  talk.advice.forEach(a => { html += `<div class="advice-item">✅ <b>${a}</b></div>`; });
+  html += '</div>';
+
+  // 7天计划
+  html += `<div class="report-card"><h3>📅 7天行动清单</h3>`;
+  const days = ['今天','明天','第3天','第4天','第5天','第6天','第7天'];
+  talk.plan.forEach((p, i) => { html += `<div class="day-plan"><div class="day">${days[i]}</div><div>${p}</div></div>`; });
+  html += '</div>';
+
+  // 二维码
+  html += `<div class="upsell"><h3>🎯 想要更深入的指导？</h3><p>这份报告帮你看到了<b>"问题在哪"</b>。<br>如果你想知道<b>"具体怎么做"</b>，欢迎添加微信咨询：</p><img src="${COURSE_LINKS.wechatConsult}" alt="微信二维码" style="width:200px;height:200px;margin:16px auto;display:block;border-radius:8px;border:2px solid #f59e0b"><p style="font-size:12px;color:#94a3b8">扫码添加微信，获取一对一咨询</p></div>`;
+
+  // 导出按钮
+  html += `<button class="btn btn-export" onclick="exportSingleReport(${index})">📥 导出此报告PDF</button>`;
+
+  const box = document.getElementById('reportDetailBox');
+  box.innerHTML = html;
+  document.getElementById('reportDetailOverlay').classList.add('active');
+  document.body.style.overflow = 'hidden';
+}
+
+// 关闭报告详情
+function closeReportDetail() {
+  document.getElementById('reportDetailOverlay').classList.remove('active');
+  document.body.style.overflow = '';
+}
+
+// 删除报告
+function deleteReport(event, index) {
+  event.stopPropagation();
+  if (!confirm('确定删除这份报告吗？')) return;
+  let reports = [];
+  try { reports = JSON.parse(localStorage.getItem('familyDiagnosisReports') || '[]'); } catch(e) {}
+  reports.splice(index, 1);
+  localStorage.setItem('familyDiagnosisReports', JSON.stringify(reports));
+  loadReportList();
+}
+
+// 导出全部数据
+function exportAllReports() {
+  let reports = [];
+  try { reports = JSON.parse(localStorage.getItem('familyDiagnosisReports') || '[]'); } catch(e) {}
+  if (reports.length === 0) { alert('暂无报告可导出'); return; }
+  const dataStr = JSON.stringify(reports, null, 2);
+  const blob = new Blob([dataStr], {type: 'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `测评报告数据_${new Date().toLocaleDateString('zh-CN')}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+// 导出单个报告PDF
+function exportSingleReport(index) {
+  const box = document.getElementById('reportDetailBox');
+  if (typeof html2canvas !== 'undefined' && typeof window.jspdf !== 'undefined') {
+    const btn = event.target;
+    const orig = btn.textContent;
+    btn.textContent = '⏳ 正在生成PDF...';
+    btn.disabled = true;
+    html2canvas(box, {scale:2, backgroundColor:'#0f1117', useCORS:true, logging:false}).then(canvas => {
+      const { jsPDF } = window.jspdf;
+      const imgData = canvas.toDataURL('image/jpeg', 0.95);
+      const pdf = new jsPDF('p','mm','a4');
+      const pdfW = pdf.internal.pageSize.getWidth();
+      const pdfH = (canvas.height * pdfW) / canvas.width;
+      let hLeft = pdfH; let pos = 0;
+      const pageH = pdf.internal.pageSize.getHeight();
+      while (hLeft > 0) { pdf.addImage(imgData,'JPEG',0,pos,pdfW,pdfH); hLeft -= pageH; pos -= pageH; if(hLeft>0) pdf.addPage(); }
+      pdf.save(`家庭教养诊断报告_${index+1}.pdf`);
+      btn.textContent = orig; btn.disabled = false;
+    }).catch(()=>{ window.print(); btn.textContent=orig; btn.disabled=false; });
+  } else {
+    window.print();
+  }
 }
 
 // 企微侧边栏部署代码生成
 function deployToWeCom() {
-  const preview = document.getElementById('adminReportPreview');
-  const url = new URL(window.location.href);
-  const h5Url = url.toString();
-
-  const deployHtml = `【企微侧边栏部署步骤】
-
-1. 企业微信管理后台 → 应用管理 → 自建应用
-2. 创建应用 → 功能 → 自定义菜单
-3. 添加菜单"家庭诊断" → 类型选"网页" → 填入链接：
-   ${h5Url}
-4. 设置可见范围 → 全员
-5. 保存后，员工在企微侧边栏即可打开诊断系统
-
-【快捷回复模板】
-复制下方话术，企微聊天中直接发给家长：
-
-📊 家庭教养匹配诊断（免费）
-3分钟测出你的教养方式 × 孩子的性格 = 匹配度分数
-含专属诊断报告 + 7天行动计划
-👉 ${h5Url}`;
-
-  preview.style.display = 'block';
-  preview.textContent = deployHtml;
+  // 已移除部署代码生成功能，改用刷新报告列表
+  loadReportList();
 }
 
 // 手动从JSON生成报告
