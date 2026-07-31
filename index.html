@@ -1,0 +1,756 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>家庭教养匹配诊断系统</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;background:#0f1117;color:#e2e8f0;line-height:1.6}
+.container{max-width:680px;margin:0 auto;padding:16px}
+h1{text-align:center;font-size:22px;margin:10px 0 4px;background:linear-gradient(90deg,#f59e0b,#ec4899);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;font-weight:800}
+.subtitle{text-align:center;color:#94a3b8;font-size:13px;margin-bottom:20px}
+
+/* Progress */
+.progress-bar{background:#1e293b;border-radius:20px;height:8px;margin-bottom:20px;overflow:hidden}
+.progress-fill{height:100%;background:linear-gradient(90deg,#3b82f6,#a855f7);transition:width .3s;border-radius:20px}
+.progress-text{text-align:center;font-size:12px;color:#94a3b8;margin-bottom:16px}
+
+/* Sections */
+.section{display:none}
+.section.active{display:block}
+.section-title{font-size:18px;font-weight:700;margin-bottom:6px;color:#f59e0b}
+.section-desc{font-size:13px;color:#94a3b8;margin-bottom:20px}
+
+/* Questions */
+.question{background:#181b2e;border:1px solid #2a2f45;border-radius:12px;padding:16px;margin-bottom:14px}
+.question .q-text{font-size:14px;font-weight:600;margin-bottom:12px}
+.question .q-num{display:inline-block;background:#3b82f6;color:#fff;font-size:11px;padding:2px 8px;border-radius:4px;margin-right:8px;font-weight:700}
+.options{display:grid;gap:8px}
+.opt{background:#1e293b;border:2px solid #2a2f45;border-radius:8px;padding:12px 14px;cursor:pointer;font-size:13px;transition:all .15s;color:#cbd5e1}
+.opt:hover{border-color:#3b82f6;background:#1e3a5f}
+.opt.selected{border-color:#10b981;background:rgba(16,185,129,.1);color:#fff}
+.opt.selected::before{content:"✓ ";color:#10b981;font-weight:700}
+
+/* Scale (1-5) */
+.scale-q{background:#181b2e;border:1px solid #2a2f45;border-radius:12px;padding:16px;margin-bottom:14px}
+.scale-q .q-text{font-size:14px;font-weight:600;margin-bottom:12px}
+.scale-opts{display:flex;gap:6px;justify-content:space-between}
+.scale-opt{flex:1;text-align:center;padding:10px 4px;background:#1e293b;border:2px solid #2a2f45;border-radius:8px;cursor:pointer;font-size:12px;transition:all .15s;color:#cbd5e1}
+.scale-opt:hover{border-color:#3b82f6}
+.scale-opt.selected{border-color:#10b981;background:rgba(16,185,129,.15);color:#fff;font-weight:700}
+.scale-opt .num{font-size:18px;font-weight:800;display:block;margin-bottom:2px}
+.scale-labels{display:flex;justify-content:space-between;font-size:10px;color:#64748b;margin-top:6px;padding:0 4px}
+
+/* Buttons */
+.btn{width:100%;padding:14px;border:none;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer;transition:all .2s}
+.btn-primary{background:linear-gradient(90deg,#3b82f6,#a855f7);color:#fff}
+.btn-primary:hover{transform:translateY(-1px);box-shadow:0 4px 20px rgba(59,130,246,.4)}
+.btn-primary:disabled{opacity:.4;cursor:not-allowed;transform:none;box-shadow:none}
+.btn-secondary{background:#1e293b;color:#94a3b8;border:1px solid #2a2f45}
+.btn-secondary:hover{border-color:#3b82f6;color:#fff}
+.btn-row{display:flex;gap:10px;margin-top:20px}
+.alert{background:rgba(239,68,68,.1);border:1px solid #ef4444;color:#fca5a5;padding:10px 14px;border-radius:8px;font-size:13px;margin-bottom:14px;display:none}
+.alert.show{display:block}
+
+/* Report */
+.report{display:none;padding:20px 0}
+.report-header{text-align:center;margin-bottom:24px}
+.report-header h2{font-size:20px;color:#f59e0b;margin-bottom:4px}
+.report-header p{font-size:12px;color:#94a3b8}
+.report-card{background:#181b2e;border:1px solid #2a2f45;border-radius:12px;padding:20px;margin-bottom:16px}
+.report-card h3{font-size:16px;color:#3b82f6;margin-bottom:12px;border-bottom:1px solid #2a2f45;padding-bottom:8px}
+.profile-boxes{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px}
+.profile-box{background:#1e293b;border-radius:10px;padding:14px;text-align:center}
+.profile-box .label{font-size:11px;color:#94a3b8;margin-bottom:4px}
+.profile-box .value{font-size:16px;font-weight:800;color:#f59e0b}
+.score-item{margin-bottom:12px}
+.score-item .score-label{font-size:13px;color:#94a3b8;margin-bottom:4px}
+.score-bar-bg{height:24px;background:#1e293b;border-radius:6px;overflow:hidden;display:flex;align-items:center}
+.score-bar-fill{height:100%;border-radius:6px;display:flex;align-items:center;padding-left:10px;font-size:11px;font-weight:700;color:#000;transition:width .5s}
+.bar-green{background:linear-gradient(90deg,#10b981,#34d399)}
+.bar-yellow{background:linear-gradient(90deg,#f59e0b,#fbbf24)}
+.bar-red{background:linear-gradient(90deg,#ef4444,#f87171)}
+.score-value{font-size:14px;font-weight:800;min-width:90px;text-align:right}
+.analysis-text{font-size:13px;line-height:1.8;color:#cbd5e1;margin-bottom:10px}
+.analysis-text b{color:#f59e0b}
+.advice-item{background:#1e293b;border-radius:8px;padding:12px 14px;margin-bottom:8px;font-size:13px}
+.advice-item b{color:#10b981}
+.day-plan{display:grid;grid-template-columns:60px 1fr;gap:8px;margin-bottom:6px;font-size:13px;align-items:center}
+.day-plan .day{background:#3b82f6;color:#fff;text-align:center;padding:4px;border-radius:4px;font-size:11px;font-weight:700}
+.upsell{text-align:center;padding:20px;background:linear-gradient(135deg,#1a1a2e,#16213e);border:2px solid #f59e0b;border-radius:12px;margin-top:20px}
+.upsell h3{color:#f59e0b;font-size:16px;margin-bottom:8px}
+.upsell p{font-size:13px;color:#94a3b8;margin-bottom:12px;line-height:1.7}
+.upsell .price{font-size:20px;font-weight:800;color:#10b981;margin:8px 0}
+.btn-export{background:#10b981;color:#fff;margin-top:16px}
+.btn-export:hover{background:#059669}
+.btn-retry{background:#1e293b;color:#94a3b8;border:1px solid #2a2f45;margin-top:10px}
+
+/* Print */
+@media print{
+  body{background:#fff;color:#1a1a2e}
+  .container{max-width:100%}
+  .progress-bar,.progress-text,.section,.btn-row,.btn,.alert{display:none!important}
+  .report{display:block!important;padding:0}
+  .report-card{background:#fff;border:1px solid #ddd;page-break-inside:avoid}
+  .report-card h3{color:#1a1a2e;border-bottom:1px solid #ddd}
+  .analysis-text,.profile-box .value{color:#1a1a2e}
+  .profile-box{background:#f8f9fa;border:1px solid #ddd}
+  .profile-box .label,.score-label,.score-value{color:#555}
+  .score-bar-bg{background:#e2e8f0}
+  .bar-green{background:#10b981}
+  .bar-yellow{background:#f59e0b}
+  .bar-red{background:#ef4444}
+  .score-bar-fill{color:#fff}
+  .advice-item{background:#f8f9fa;border:1px solid #ddd}
+  .advice-item b{color:#059669}
+  .day-plan .day{background:#3b82f6}
+  .upsell{background:#f8f9fa;border:2px solid #f59e0b}
+  .upsell h3{color:#d97706}
+  .upsell p{color:#555}
+  .upsell a{color:#fff!important;text-decoration:none}
+  .report-header h2{color:#d97706}
+}
+</style>
+</head>
+<body>
+<div class="container">
+<h1>家庭教养匹配诊断系统</h1>
+<p class="subtitle">DISC性格 × 教养方式 × 匹配度 一体化诊断</p>
+
+<div class="progress-bar"><div class="progress-fill" id="progressFill" style="width:0%"></div></div>
+<p class="progress-text" id="progressText">准备开始</p>
+
+<div class="alert" id="alert">请完成所有题目后再继续</div>
+
+<!-- Section 1: 家长DISC -->
+<div class="section active" id="sec1">
+<h2 class="section-title">第一部分：家长 DISC 性格测评</h2>
+<p class="section-desc">请根据您最真实的状态作答，每题选一个最符合的选项。共24题。</p>
+<div id="parentDiscQs"></div>
+<div class="btn-row">
+<button class="btn btn-primary" onclick="nextSection(1)">下一部分 →</button>
+</div>
+</div>
+
+<!-- Section 2: 孩子DISC -->
+<div class="section" id="sec2">
+<h2 class="section-title">第二部分：孩子 DISC 性格测评</h2>
+<p class="section-desc">根据日常观察为孩子选择最符合的选项，每题单选。共16题。</p>
+<div id="childDiscQs"></div>
+<div class="btn-row">
+<button class="btn btn-secondary" onclick="prevSection(2)">← 上一部分</button>
+<button class="btn btn-primary" onclick="nextSection(2)">下一部分 →</button>
+</div>
+</div>
+
+<!-- Section 3: 教养方式 -->
+<div class="section" id="sec3">
+<h2 class="section-title">第三部分：父母教养方式测评</h2>
+<p class="section-desc">第1-10题按1-5分评分，第11-20题单选。共20题。</p>
+<div id="parentingQs"></div>
+<div class="btn-row">
+<button class="btn btn-secondary" onclick="prevSection(3)">← 上一部分</button>
+<button class="btn btn-primary" onclick="generateReport()">📊 生成匹配报告</button>
+</div>
+</div>
+
+<!-- Report -->
+<div class="report" id="report">
+<div class="report-header">
+<h2>📋 家庭教养匹配诊断报告</h2>
+<p id="reportDate"></p>
+</div>
+<div id="reportContent"></div>
+<button class="btn btn-export" onclick="window.print()">📥 导出PDF（选"另存为PDF"）</button>
+<button class="btn btn-retry" onclick="location.reload()">🔄 重新测评</button>
+</div>
+
+</div>
+
+<script>
+// ═════════════════════════════════════════
+// 题库数据
+// ═════════════════════════════════════════
+
+const parentDiscQuestions = [
+["在家庭中做决定时，我通常：","快速决定，不喜欢拖泥带水","会考虑大家的感受再做决定","希望有人拿主意，我配合就好","仔细分析利弊后再决定"],
+["当家里出现冲突时，我倾向于：","直接面对，必须解决","想办法活跃气氛，化解尴尬","回避冲突，等它自然过去","理性分析谁对谁错"],
+["我给孩子的印象是：","有主见、说一不二","开朗、好说话","温和、好脾气","严肃、讲道理"],
+["辅导孩子作业时，我最容易：","催促'快点写，别磨蹭'","边聊边辅导，气氛轻松","耐心陪着，孩子慢慢来","讲方法讲逻辑，要求规范"],
+["我给孩子定规则时：","说了就算，执行到底","会跟孩子商量，达成共识","灵活执行，看情况","有明确的逻辑和标准"],
+["我最看重的品质是：","执行力和效率","热情和人际关系","耐心和和谐","精准和严谨"],
+["和孩子相处时，我最常：","催着做事，讲究效率","有说有笑，氛围活跃","安静陪伴，不给压力","指导方法，纠正错误"],
+["亲戚朋友聚会上，我是：","组织者，安排一切","活跃气氛的那个","安静坐着，有人聊就聊","观察者，分析每个人的表现"],
+["孩子跟我分享学校的事，我通常：","'说重点，然后该干嘛干嘛'","'哇真的吗？快详细讲讲！'","认真听，不急着评价","问细节，分析原因"],
+["表达爱的方式，我更多是：","帮孩子解决问题","拥抱、说'我爱你'、送小礼物","默默照顾生活起居","教道理、讲方法"],
+["我最怕孩子在社交中：","被欺负不敢还手","没朋友、不合群","被排挤、受伤害","被带坏、学坏习惯"],
+["当孩子情绪低落时，我会：","'别哭了，想想怎么解决'","拥抱他，逗他开心","安静陪在身边","分析他为什么情绪低落"],
+["周末我更倾向于：","带孩子出去活动，安排满满","约朋友一起玩，热闹","在家安静待着，做做饭","做计划，按计划执行"],
+["当家里有变动（搬家/换学校）时：","我主导推动，快速适应","我积极面对，带动全家","我需要时间适应，不喜欢变化","我提前规划，降低风险"],
+["我和另一半在教育上有分歧时：","我会坚持自己的观点","会争论但很快和好","我通常让步，避免冲突","摆事实讲道理"],
+["孩子犯错时，我的第一反应是：","'为什么这么做？马上改正'","'你没事吧？发生了什么？'","'没关系，下次注意就好'","'我们来分析一下错在哪'"],
+["我在家庭中的角色更像：","指挥官","气氛组","后勤部长","参谋长"],
+["我对孩子成绩的态度：","必须好，没得商量","尽力就好，开心最重要","不给孩子太大压力","有目标有计划地提升"],
+["我做家务/管孩子的方式是：","讲效率，快速搞定","边做边玩，不枯燥","按部就班，稳定输出","有流程有标准，一丝不苟"],
+["孩子的房间/书桌，我希望：","别太乱就行","有个性的布置","温馨舒适就好","整整齐齐、物归原位"],
+["给孩子选兴趣班时：","我直接拍板","让孩子选喜欢的","选离家近、时间合适的","调研对比，选最合适的"],
+["我最受不了孩子：","顶嘴、不服从","不说话、闷着","被人欺负","做事马虎、不认真"],
+["我表达关心的方式是：","帮孩子扫清障碍","陪伴聊天、制造快乐","照顾饮食起居","检查作业、纠正错误"],
+["面对突如其来的计划变化：","立刻调整，推进执行","'好吧，那就改计划'乐观应对","感到不适，需要时间调整","重新分析规划"],
+];
+
+const childDiscQuestions = [
+["孩子在做选择时，通常：","很有主见，自己拿主意","会问大人意见，但有自己的想法","听大人的安排","要想很久，纠结细节"],
+["在陌生环境中，孩子：","很快适应，开始探索","很快交到新朋友","默默观察，慢热","先观察规则再行动"],
+["和小朋友一起玩时，孩子通常是：","发号施令的那个","最活跃、话最多的那个","跟着玩的那个","关注游戏规则对不对的那个"],
+["孩子发脾气时：","大声抗议，很强硬","哭闹但很快能被逗笑","闷不吭声，躲起来","讲道理反驳"],
+["写作业时，孩子：","速度优先，赶紧写完去玩","边写边聊，坐不住","慢慢写，不着急","一笔一划，写不好擦掉重来"],
+["孩子最喜欢：","比赛、竞争类游戏","表演、社交类活动","安静的手工、画画","拼图、乐高等需要逻辑的"],
+["当你说'不'时，孩子：","直接反抗，跟你争","撒娇、讨价还价","乖乖接受","问'为什么不行'"],
+["孩子的朋友：","不多，但都是'跟班'","很多，谁都认识","几个固定的好朋友","不多，都是志趣相投的"],
+["孩子的房间/书桌：","乱但不影响找东西","到处是玩具和画","还算整洁","东西摆放有固定位置"],
+["被批评时，孩子：","顶嘴或生气","委屈但很快忘了","默默接受，不说话","讲道理反驳"],
+["做事情时，孩子：","要赢、要做到最好","开心就好，结果不重要","按部就班，不着急","要求自己做到完美"],
+["孩子说话时：","直接、简短","表情丰富、爱讲故事","温和、慢条斯理","用词准确、逻辑清晰"],
+["面对新任务时：","跃跃欲试，立刻开始","很兴奋，拉着别人一起","先看看别人怎么做","先问清楚要求和规则"],
+["孩子最怕：","被控制、失去自主权","没人理、被冷落","突然的变化、冲突","做错事、被说做得不好"],
+["孩子的情绪特点：","来得快走得快，脾气大","来得快走得也快，但容易被影响","不轻易发脾气，但一旦爆发很严重","闷在心里，不轻易表露"],
+["买东西时，孩子：","快速选一个","看到喜欢的就要，容易被吸引","让你帮他选","对比很久，纠结选哪个"],
+];
+
+const parentingScaleQuestions = [
+"我经常用语言或拥抱表达对孩子的爱。",
+"孩子情绪低落时，我会放下手头的事先安抚他。",
+"我经常主动问孩子'今天开心吗''有什么想跟我分享的'。",
+"孩子犯错时，我会先听他解释再下判断。",
+"我每天至少有15分钟专注陪伴孩子（不看手机）。",
+"我们家有明确的家规，孩子知道什么能做、什么不能做。",
+"孩子不遵守约定时，我会坚定执行后果，不心软。",
+"我对孩子的学业和行为有清晰的标准和期望。",
+"我会给孩子布置适龄的家务或责任。",
+"孩子讨价还价时，我能守住底线。",
+];
+
+const parentingBehaviorQuestions = [
+["当孩子跟我意见不同时，我会：","'我是家长，我说了算'","'来，我们商量一下'","'好吧，你决定就好'","'你自己看着办吧'"],
+["孩子想买不太需要的东西时：","直接拒绝，不解释","跟他分析是否需要，一起决定","他坚持就买了","无所谓，他自己有零花钱"],
+["孩子的作业我：","必须按我的要求写，写不好重写","关注进度，有困难一起讨论","不太管，他自己会写","基本不过问"],
+["家里来客人时，对孩子的行为：","提前规定好怎么打招呼、怎么表现","提前沟通预期，灵活调整","随他去，孩子嘛","没特别要求"],
+["当孩子在公共场合闹情绪时：","立刻制止：'不许哭！'","带到安静处，先安抚再讲道理","哄着满足要求，别丢人","不管他，自己会好"],
+["关于孩子的朋友圈：","我要筛选，不跟不好的孩子玩","关心但尊重，引导他分辨","不管，他自己选","不了解他的朋友"],
+["孩子遇到困难时：","告诉他怎么做，按我说的来","引导他自己想办法，必要时帮一把","觉得他自己能解决","没注意到他遇到困难"],
+["关于孩子的兴趣班：","我选我认为有用的","一起讨论，尊重他的兴趣","他想学什么就学什么","没特别安排"],
+["我和另一半在教育上：","必须听我的","有分歧会讨论达成一致","各管各的，不统一","都不太管"],
+["每天和孩子有效沟通的时间：","有，但主要是我在说","有，是双向交流","有，但主要是听他的","很少"],
+];
+
+// ═════════════════════════════════════════
+// 答案存储
+// ═════════════════════════════════════════
+const answers = { parentDisc:[], childDisc:[], parentingScale:[], parentingBehavior:[] };
+
+// ═════════════════════════════════════════
+// 渲染题目
+// ═════════════════════════════════════════
+
+function renderParentDisc() {
+  const c = document.getElementById('parentDiscQs');
+  let html = '';
+  parentDiscQuestions.forEach((q,i) => {
+    html += `<div class="question"><div class="q-text"><span class="q-num">${i+1}</span>${q[0]}</div><div class="options">`;
+    ['A','B','C','D'].forEach((opt,j) => {
+      html += `<div class="opt" onclick="selectOpt('parentDisc',${i},this,'${opt}')">${q[j+1]}</div>`;
+    });
+    html += `</div></div>`;
+  });
+  c.innerHTML = html;
+}
+
+function renderChildDisc() {
+  const c = document.getElementById('childDiscQs');
+  let html = '';
+  childDiscQuestions.forEach((q,i) => {
+    html += `<div class="question"><div class="q-text"><span class="q-num">${i+1}</span>${q[0]}</div><div class="options">`;
+    ['A','B','C','D'].forEach((opt,j) => {
+      html += `<div class="opt" onclick="selectOpt('childDisc',${i},this,'${opt}')">${q[j+1]}</div>`;
+    });
+    html += `</div></div>`;
+  });
+  c.innerHTML = html;
+}
+
+function renderParenting() {
+  const c = document.getElementById('parentingQs');
+  let html = '';
+  // 1-10 量表
+  parentingScaleQuestions.forEach((q,i) => {
+    html += `<div class="scale-q"><div class="q-text"><span class="q-num">${i+1}</span>${q}</div><div class="scale-opts">`;
+    [1,2,3,4,5].forEach(n => {
+      html += `<div class="scale-opt" onclick="selectScale(${i},this,${n})"><span class="num">${n}</span></div>`;
+    });
+    html += `</div><div class="scale-labels"><span>完全不符合</span><span>有时符合</span><span>完全符合</span></div></div>`;
+  });
+  // 11-20 单选
+  parentingBehaviorQuestions.forEach((q,i) => {
+    const num = i + 11;
+    html += `<div class="question"><div class="q-text"><span class="q-num">${num}</span>${q[0]}</div><div class="options">`;
+    ['A','B','C','D'].forEach((opt,j) => {
+      html += `<div class="opt" onclick="selectOpt('parentingBehavior',${i},this,'${opt}')">${q[j+1]}</div>`;
+    });
+    html += `</div></div>`;
+  });
+  c.innerHTML = html;
+}
+
+function selectOpt(category, idx, el, opt) {
+  const parent = el.parentElement;
+  parent.querySelectorAll('.opt').forEach(o => o.classList.remove('selected'));
+  el.classList.add('selected');
+  answers[category][idx] = opt;
+}
+
+function selectScale(idx, el, val) {
+  const parent = el.parentElement;
+  parent.querySelectorAll('.scale-opt').forEach(o => o.classList.remove('selected'));
+  el.classList.add('selected');
+  answers.parentingScale[idx] = val;
+}
+
+// ═════════════════════════════════════════
+// 页面切换
+// ═════════════════════════════════════════
+
+function updateProgress(sec) {
+  const pcts = [33, 60, 90, 100];
+  const texts = ["第一部分：家长DISC（1/3）","第二部分：孩子DISC（2/3）","第三部分：教养方式（3/3）","生成报告中..."];
+  document.getElementById('progressFill').style.width = pcts[sec-1] + '%';
+  document.getElementById('progressText').textContent = texts[sec-1];
+}
+
+function nextSection(current) {
+  const alert = document.getElementById('alert');
+  let total, answered;
+  if (current === 1) { total = 24; answered = answers.parentDisc.filter(a=>a).length; }
+  if (current === 2) { total = 16; answered = answers.childDisc.filter(a=>a).length; }
+  if (current < 1 || current > 2) return;
+  if (answered < total) { alert.classList.add('show'); setTimeout(()=>alert.classList.remove('show'),3000); window.scrollTo(0,0); return; }
+  document.getElementById('sec'+current).classList.remove('active');
+  document.getElementById('sec'+(current+1)).classList.add('active');
+  updateProgress(current+1);
+  window.scrollTo(0,0);
+}
+
+function prevSection(current) {
+  document.getElementById('sec'+current).classList.remove('active');
+  document.getElementById('sec'+(current-1)).classList.add('active');
+  updateProgress(current-1);
+  window.scrollTo(0,0);
+}
+
+// ═════════════════════════════════════════
+// ★ 课程链接配置区 ★
+// 拿到视频号课程链接后，把下面引号里的内容替换成你的链接即可
+// 获取方法见文件末尾说明
+// ═════════════════════════════════════════
+const COURSE_LINKS = {
+  // 99元引流课购买链接（视频号/微信小店）
+  course99: '#微信小店://澜澜知识/lqRsPUb9MvPtg7F',
+  // 1999元系统课购买链接（暂用99课链接，上架后替换）
+  course1999: '#微信小店://澜澜知识/lqRsPUb9MvPtg7F',
+  // 1对1私教咨询微信（用于"添加微信咨询"按钮）
+  wechatConsult: 'https://work.weixin.qq.com/apph5/user/h5/corp?from=wx_plugin&vid_code_wx=73386438000000005C4C6C65F64FE4C5DA4627C247EC932D0DE0E3D31A876222C20BCE1962D2EF1F529A92DD44FA27C6A738D04BE53B6200DEE6AC5319083D11FA724CD97F364DE2&last_retry_auth=1785481835229',
+};
+
+// ═════════════════════════════════════════
+// 算分引擎
+// ═════════════════════════════════════════
+
+function calcParentDisc() {
+  const scores = {D:0,I:0,S:0,C:0};
+  const optMap = {A:'D', B:'I', C:'S', D:'C'};
+  answers.parentDisc.forEach(a => { if(a && optMap[a]) scores[optMap[a]]++; });
+  const max = Math.max(scores.D, scores.I, scores.S, scores.C);
+  const types = [];
+  if (scores.D === max) types.push('D');
+  if (scores.I === max) types.push('I');
+  if (scores.S === max) types.push('S');
+  if (scores.C === max) types.push('C');
+  // 判断双主导
+  const sorted = Object.entries(scores).sort((a,b)=>b[1]-a[1]);
+  const diff = sorted[0][1] - sorted[1][1];
+  let type = sorted[0][0];
+  let dual = '';
+  if (diff <= 2 && types.length === 1) {
+    dual = sorted[1][0];
+  }
+  return { scores, type, dual, max };
+}
+
+function calcChildDisc() {
+  const scores = {D:0,I:0,S:0,C:0};
+  const optMap = {A:'D', B:'I', C:'S', D:'C'};
+  answers.childDisc.forEach(a => { if(a && optMap[a]) scores[optMap[a]]++; });
+  const sorted = Object.entries(scores).sort((a,b)=>b[1]-a[1]);
+  let type = sorted[0][0];
+  let bias = '';
+  if (sorted[0][1] - sorted[1][1] <= 1) {
+    bias = sorted[1][0];
+  }
+  return { scores, type, bias };
+}
+
+function calcParenting() {
+  // R均分（题1-5）
+  const rSum = answers.parentingScale.slice(0,5).reduce((a,b)=>a+(b||0),0);
+  const rAvg = rSum / 5;
+  // D均分（题6-10）
+  const dSum = answers.parentingScale.slice(5,10).reduce((a,b)=>a+(b||0),0);
+  const dAvg = dSum / 5;
+  // 判型
+  let type, typeLabel, edge = false;
+  if (rAvg >= 3.5 && dAvg >= 3.5) { type = 'authoritative'; typeLabel = '权威型'; }
+  else if (rAvg < 3.5 && dAvg >= 3.5) { type = 'authoritarian'; typeLabel = '专制型'; }
+  else if (rAvg >= 3.5 && dAvg < 3.5) { type = 'permissive'; typeLabel = '放任型'; }
+  else { type = 'neglectful'; typeLabel = '忽视型'; }
+  // 边缘
+  if ((rAvg >= 3.0 && rAvg < 3.5) || (dAvg >= 3.0 && dAvg < 3.5)) {
+    edge = true;
+  }
+  // 行为特征交叉验证
+  const behaviorScores = {A:0,B:0,C:0,D:0};
+  answers.parentingBehavior.forEach(a => { if(a) behaviorScores[a]++; });
+  const behaviorMap = {A:'authoritarian',B:'authoritative',C:'permissive',D:'neglectful'};
+  const behaviorSorted = Object.entries(behaviorScores).sort((a,b)=>b[1]-a[1]);
+  const behaviorType = behaviorMap[behaviorSorted[0][0]];
+  const mismatch = behaviorType !== type;
+  return { rAvg, dAvg, type, typeLabel, edge, behaviorType, mismatch };
+}
+
+// 匹配度矩阵
+const matchMatrix = {
+  authoritarian: { D:30, I:50, S:70, C:50 },
+  authoritative: { D:60, I:90, S:90, C:90 },
+  permissive: { D:35, I:60, S:60, C:35 },
+  neglectful: { D:20, I:20, S:20, C:20 },
+};
+
+// 知行一致度矩阵
+const consistencyMatrix = {
+  D: { authoritarian:75, authoritative:50, permissive:30, neglectful:25 },
+  I: { authoritarian:35, authoritative:55, permissive:75, neglectful:25 },
+  S: { authoritarian:40, authoritative:80, permissive:60, neglectful:25 },
+  C: { authoritarian:65, authoritative:80, permissive:45, neglectful:25 },
+};
+
+function calcMatch(parentType, childType, parentDiscType, parentingType) {
+  const matchScore = matchMatrix[parentingType][childType];
+  const consistencyScore = consistencyMatrix[parentDiscType][parentingType];
+  const totalScore = Math.round(matchScore * 0.6 + consistencyScore * 0.4);
+  return { matchScore, consistencyScore, totalScore };
+}
+
+function scoreLevel(score) {
+  if (score >= 80) return { label:'🟢 匹配良好', color:'bar-green' };
+  if (score >= 60) return { label:'🟡 有摩擦，可调', color:'bar-yellow' };
+  if (score >= 35) return { label:'🟠 需重点调整', color:'bar-yellow' };
+  return { label:'🔴 严重不匹配', color:'bar-red' };
+}
+
+function totalLevel(score) {
+  if (score >= 80) return { label:'🟢 优秀', color:'bar-green' };
+  if (score >= 60) return { label:'🟡 良好，有提升空间', color:'bar-yellow' };
+  if (score >= 40) return { label:'🟠 需重点调整', color:'bar-yellow' };
+  return { label:'🔴 建议寻求专业指导', color:'bar-red' };
+}
+
+// ═════════════════════════════════════════
+// 话术库
+// ═════════════════════════════════════════
+
+const discLabels = {
+  D: { name:'高D型 · 掌控型', emoji:'🦁', desc:'有主见、要赢、不服管、行动力强' },
+  I: { name:'高I型 · 影响型', emoji:'🦚', desc:'开朗、爱表达、人缘好、情绪丰富' },
+  S: { name:'高S型 · 稳定型', emoji:'🐨', desc:'温和、耐心、慢节奏、不喜欢冲突' },
+  C: { name:'高C型 · 谨慎型', emoji:'🦉', desc:'严谨、逻辑强、追求完美、有自己标准' },
+};
+
+const parentingLabels = {
+  authoritarian: { name:'专制型', desc:'低回应 + 高要求｜"我是家长，我说了算"' },
+  authoritative: { name:'权威型', desc:'高回应 + 高要求｜既有温度又有规则' },
+  permissive: { name:'放任型', desc:'高回应 + 低要求｜"孩子开心就好"' },
+  neglectful: { name:'忽视型', desc:'低回应 + 低要求｜投入不足' },
+};
+
+// 教养匹配度话术 16组
+const matchTalk = {
+  authoritarian: {
+    D: {
+      analysis:'你是<b>专制型</b>家长，孩子是<b>高D型掌控型</b>性格。你们俩都是"要说了算"的人，就像两个将军在一个战壕里，天天硬碰硬。孩子要自主权，你要控制权——这就是你们天天吵架的根源。',
+      conflicts:['你下命令→孩子顶嘴→升级为争吵','你管得越多→孩子越逆反','孩子觉得"你根本不尊重我"'],
+      advice:['从"下命令"改为"给选择"：不说"马上去写作业"，说"你打算先写数学还是语文？"','给孩子有限度的自主权：在安全范围内让他自己做决定','先听孩子说完再下判断，哪怕你不同意'],
+      plan:['观察：今天孩子发脾气时，你的第一反应是什么？写下来','尝试：用"给选择"替代一次"下命令"','记录：孩子对"选择"的反应，有没有比"命令"好一点？','继续练习"给选择"，至少3次','找一件小事，让孩子完全自己做主','复盘：这周吵架次数有没有减少？','总结：哪些方法有效，下周继续']
+    },
+    I: {
+      analysis:'你是<b>专制型</b>家长，孩子是<b>高I型影响型</b>性格。高I孩子天生想讨好大人，表面会服从，但内心会积压委屈——"我怎么做都不够好"。长期下去孩子会变得不敢表达真实想法。',
+      conflicts:['孩子表面乖巧，但内心委屈','孩子开始报喜不报忧','亲子关系表面和平，实则疏远'],
+      advice:['每天至少问一次"你觉得呢？"，认真听他说完','减少批评的频率，增加具体表扬','允许孩子表达负面情绪，不制止'],
+      plan:['今天问孩子一个"你觉得呢"的问题，只听不说','观察孩子今天有没有报喜不报忧','表扬孩子一个具体行为（不是"你真棒"）','允许孩子表达一次不满，不反驳','继续练习"先听后说"','复盘：孩子这周有没有多说心里话？','总结：亲子关系有没有一点变化？']
+    },
+    S: {
+      analysis:'你是<b>专制型</b>家长，孩子是<b>高S型稳定型</b>性格。高S孩子服从性强，表面看起来很乖，但他的"乖"不是因为认同，而是因为害怕冲突。长期下去会压抑自我、缺乏主见。',
+      conflicts:['孩子很乖但从不主动表达需求','孩子越来越没有主见','你问什么他都"随便"'],
+      advice:['多问"你想要什么"，鼓励他说不一样的话','给孩子做选择的机会，哪怕小事','注意孩子的"乖"是不是在回避冲突'],
+      plan:['今天问孩子"你想要什么"，等他回答','让孩子做一个小决定（如吃什么）','观察孩子是不是总说"随便"','鼓励孩子说出一个和你不同的意见','继续鼓励表达','复盘：孩子有没有开始说自己的需求？','总结：孩子的"乖"是不是在怕你？']
+    },
+    C: {
+      analysis:'你是<b>专制型</b>家长，孩子是<b>高C型谨慎型</b>性格。高C孩子心里有自己的一套标准，你用"我说了算"压他，他不会正面反抗，但会用"拖延""磨蹭""沉默"来暗怼。',
+      conflicts:['孩子表面不反抗但磨蹭拖延','孩子用沉默对抗','你说东他偏不往东，但不说为什么'],
+      advice:['解释"为什么"，高C需要理由才会服气','给孩子参与制定规则的机会','认可孩子的标准，别总觉得你的才对'],
+      plan:['今天给孩子一个指令时，加上"因为…"','让孩子参与制定一条家规','观察孩子磨蹭是不是在"暗怼"','跟孩子讨论一次规则，听他的想法','继续练习"解释原因"','复盘：孩子磨蹭有没有减少？','总结：给孩子理由后，配合度有没有变化？']
+    },
+  },
+  authoritative: {
+    D: {
+      analysis:'你是<b>权威型</b>家长，孩子是<b>高D型掌控型</b>性格。方向是对的，但高D孩子需要"有限度的自由"——完全商量他会觉得你软弱，完全命令他会反抗。',
+      conflicts:['你商量→孩子得寸进尺','你给自由→孩子挑战底线','孩子觉得你"不够果断"'],
+      advice:['给选择权+明确底线："这两件事你选一件，但必须做完"','该果断时果断，高D尊重有决断力的人','规则一旦定好不讨价还价'],
+      plan:['今天给孩子一个"选择+底线"的指令','观察孩子对"选择"vs"命令"的反应','定好一条规则并坚持执行','复盘：孩子有没有试探底线','调整：哪些地方该更果断','复盘：这周冲突有没有减少','总结：权威型对高D的调整效果']
+    },
+    I: {
+      analysis:'你是<b>权威型</b>家长，孩子是<b>高I型影响型</b>性格。这是<b>最优组合</b>！你的温暖回应满足了高I的情感需求，你的规则帮他建立边界。',
+      conflicts:['高I容易"好了伤疤忘了疼"，规则执行要一致','孩子情绪化时你可能被带偏'],
+      advice:['继续保持温暖回应+清晰规则','规则执行要一致，别因孩子撒娇而心软','多给孩子表达和表演的舞台'],
+      plan:['今天表扬孩子一个具体行为','观察孩子的情绪波动','坚持一条规则不心软','给孩子一个表达的机会','复盘：规则执行一致性','继续保持','总结：这个组合的优势有没有发挥出来']
+    },
+    S: {
+      analysis:'你是<b>权威型</b>家长，孩子是<b>高S型稳定型</b>性格。这是<b>最优组合</b>！你给的稳定规则+情感支持，正是高S孩子最需要的。',
+      conflicts:['高S不敢主动表达需求，你可能忽略','孩子慢，你可能着急'],
+      advice:['主动问"你是不是有什么不开心"','给孩子时间适应变化，不催','鼓励孩子表达不同意见'],
+      plan:['今天主动问孩子一次"有什么不开心的"','观察孩子有没有隐藏的需求','给孩子时间做一件事，不催','鼓励孩子说出一个不同意见','复盘：孩子有没有开始表达','继续鼓励','总结：高S孩子的安全感有没有增强']
+    },
+    C: {
+      analysis:'你是<b>权威型</b>家长，孩子是<b>高C型谨慎型</b>性格。这是<b>最优组合</b>！你讲的道理+清晰的规则，高C完全吃得下。',
+      conflicts:['高C容易过度追求完美，你可能加压','孩子想太多做太少'],
+      advice:['允许孩子犯错，告诉他"做到80分就很棒了"','别当众批评，高C面子薄','鼓励行动，别让分析拖住'],
+      plan:['今天告诉孩子"80分就很棒"','观察孩子是不是在追求完美','允许孩子犯一次错不批评','鼓励孩子先做再想','复盘：孩子完美主义有没有缓解','继续鼓励','总结：高C孩子的放松程度有没有变化']
+    },
+  },
+  permissive: {
+    D: {
+      analysis:'你是<b>放任型</b>家长，孩子是<b>高D型掌控型</b>性格。高D孩子天生要挑战边界，你的放任会让他变本加厉——他不是不需要规则，而是在试探"到底底线在哪"。缺乏边界会让他焦虑不安。',
+      conflicts:['孩子不断挑战底线','你说"不"他根本不听','孩子越来越难管'],
+      advice:['建立3条不可商量的家规','温和而坚定地执行规则','给孩子选择权，但底线不能退'],
+      plan:['今天建立第一条家规并告诉孩子','观察孩子试探底线的表现','坚定执行一次规则，不退让','建立第二条家规','复盘：孩子对规则的反应','继续坚定执行','总结：边界感有没有建立起来']
+    },
+    I: {
+      analysis:'你是<b>放任型</b>家长，孩子是<b>高I型影响型</b>性格。你们关系很温暖，但高I孩子需要方向感——"妈妈不管我"会被他解读为"妈妈不在乎我"。',
+      conflicts:['孩子享受自由但越来越迷茫','亲子关系好但缺乏引导','孩子缺乏目标感'],
+      advice:['每周一次"定向对话"，聊聊目标和感受','建立基本规则，不全部放任','给孩子具体的方向引导'],
+      plan:['今天和孩子聊一次"这周想做什么"','观察孩子是不是在迷茫','建立一个基本规则','给孩子一个具体目标','复盘：孩子有没有方向感','继续引导','总结：高I孩子的迷茫有没有缓解']
+    },
+    S: {
+      analysis:'你是<b>放任型</b>家长，孩子是<b>高S型稳定型</b>性格。高S孩子需要指引，你的放任会让他发展停滞——"不知道该做什么"。',
+      conflicts:['孩子缺乏主动性','不知道该做什么','发展停滞'],
+      advice:['每天给一个小任务+一个肯定','建立基本作息和规则','给孩子明确的期待'],
+      plan:['今天给孩子一个小任务','观察孩子完成后的反应','给孩子一个具体肯定','建立一个基本规则','复盘：孩子主动性有没有变化','继续给任务+肯定','总结：高S孩子有没有开始主动']
+    },
+    C: {
+      analysis:'你是<b>放任型</b>家长，孩子是<b>高C型谨慎型</b>性格。高C孩子天生需要秩序和清晰的标准，你的放任会让他焦虑不安——"我不知道做得对不对"。',
+      conflicts:['孩子焦虑不安','不知道标准是什么','孩子反复确认"对不对"'],
+      advice:['建立清晰的作息表和标准','告诉孩子"做到什么程度就够了"','给孩子明确的规则和期待'],
+      plan:['今天和孩子一起制定作息表','观察孩子的焦虑表现','告诉孩子一个清晰的标准','建立规则','复盘：孩子焦虑有没有缓解','继续给清晰标准','总结：高C孩子的安全感有没有增强']
+    },
+  },
+  neglectful: {
+    D: { analysis:'你目前在教养上的投入不足，无论是回应还是要求都偏低。高D孩子在忽视型教养下最容易走歪路或过早成熟。', conflicts:['孩子自生自灭','走歪路或过早成熟','亲子关系疏远'], advice:['从每天15分钟专注陪伴开始','建立基本的家规','关注孩子的情绪和需求'], plan:['今天专注陪伴孩子15分钟','观察孩子的反应','建立一条基本家规','主动问孩子一次"今天怎么样"','复盘：亲子连接有没有变化','继续每天15分钟','总结：孩子的反应和变化'] },
+    I: { analysis:'你目前在教养上的投入不足。高I孩子在忽视型教养下最受伤——"爸妈根本不在乎我"。', conflicts:['孩子觉得"没人爱我"','通过讨好别人获取关注','情绪问题'], advice:['从每天15分钟专注陪伴开始','每天对孩子说一次"我爱你"','主动关心孩子的社交和情绪'], plan:['今天专注陪伴15分钟','主动问孩子"今天开心吗"','告诉孩子"我爱你"','观察孩子的情绪','复盘：孩子有没有变化','继续每天陪伴','总结：亲子连接有没有改善'] },
+    S: { analysis:'你目前在教养上的投入不足。高S孩子在忽视型教养下安全感会崩塌——"被忽略=我不重要"。', conflicts:['安全感崩塌','越来越内向','不主动表达'], advice:['从每天15分钟专注陪伴开始','建立稳定的作息','主动关心孩子的需求'], plan:['今天专注陪伴15分钟','建立一条稳定作息','主动问孩子需求','观察安全感变化','复盘：孩子有没有变化','继续陪伴','总结：安全感有没有改善'] },
+    C: { analysis:'你目前在教养上的投入不足。高C孩子在忽视型教养下会自我怀疑——"没有人告诉我做得对不对"。', conflicts:['自我怀疑','缺乏方向','越来越不自信'], advice:['从每天15分钟专注陪伴开始','给孩子明确的反馈','建立规则和标准'], plan:['今天专注陪伴15分钟','给孩子一次明确反馈','建立一条规则','观察自信度变化','复盘：孩子有没有变化','继续陪伴+反馈','总结：自信度有没有改善'] },
+  },
+};
+
+// 知行一致度话术
+const consistencyTalk = {
+  D: {
+    authoritarian: '你是<b>高D型性格+专制型教养</b>。说实话这是最"顺手"的组合——D型天生掌控欲强，专制型让你觉得"一切尽在掌握"。但顺手的未必是对的，你和孩子之间的"效率"可能建立在牺牲孩子表达权的基础上。',
+    authoritative: '你是<b>高D型性格+权威型教养</b>。你心里知道要"商量"，但本能反应是"下命令"——这就是你的知行陷阱。',
+    permissive: '你是<b>高D型性格+放任型教养</b>。这与D型天性完全相反，说明你在刻意克制自己，但很难持续。',
+    neglectful: '你是<b>高D型性格+忽视型教养</b>。你的D型能量没有用在家庭上，可能在工作中耗尽了。',
+  },
+  I: {
+    authoritarian: '你是<b>高I型性格+专制型教养</b>。这与I型天性相反，说明你可能在刻意伪装，或者受了原生家庭影响。',
+    authoritative: '你是<b>高I型性格+权威型教养</b>。你在努力做到"温暖+规则"，但面对孩子撒娇讨价时容易心软。',
+    permissive: '你是<b>高I型性格+放任型教养</b>。I型怕冲突、想让大家都开心，放任型让你觉得"关系好就行"。但孩子需要的是"有边界的爱"。',
+    neglectful: '你是<b>高I型性格+忽视型教养</b>。你的I型能量没有用在家庭上，可能社交消耗了你的精力。',
+  },
+  S: {
+    authoritarian: '你是<b>高S型性格+专制型教养</b>。这与S型天性相反，说明你可能在模仿自己的父母。',
+    authoritative: '你是<b>高S型性格+权威型教养</b>。这是<b>最优组合</b>！S型的耐心+权威型的规则感，让你能稳定地给孩子"有温度的边界"。',
+    permissive: '你是<b>高S型性格+放任型教养</b>。S型怕冲突，遇到孩子抗拒就容易退让。你以为是"尊重孩子"，其实是"回避冲突"。',
+    neglectful: '你是<b>高S型性格+忽视型教养</b>。S型能量不足时容易退缩，可能是你太累了。',
+  },
+  C: {
+    authoritarian: '你是<b>高C型性格+专制型教养</b>。C型标准高、要求严，容易从"权威"滑向"专制"——"我的标准就是标准"。',
+    authoritative: '你是<b>高C型性格+权威型教养</b>。这是<b>最优组合</b>！C型的逻辑+权威型的规则，让你能给孩子清晰的方法论。',
+    permissive: '你是<b>高C型性格+放任型教养</b>。C型想太多做太少，容易被误判为忽视。',
+    neglectful: '你是<b>高C型性格+忽视型教养</b>。C型过度分析导致行动慢，"想太多做太少"。',
+  },
+};
+
+const discParentAdvice = {
+  D: ['你对效率的追求很强，但孩子需要过程——给他时间','把"你必须"换成"你选哪个"，效果翻倍','注意你的语气，高D容易用命令式语气而不自知'],
+  I: ['你天生有感染力，善用它来激励孩子','注意规则一致性，别因情绪波动而摇摆','把表扬具体化，不是"你真棒"而是"你今天主动收拾了书包，很好"'],
+  S: ['你的耐心是最大的优势，继续保持','遇到该管的事别退缩，温和而坚定','给自己也留时间充电，S型容易过度付出'],
+  C: ['你的方法论是强项，给孩子清晰的步骤','注意别过度挑剔，允许孩子犯错','增加情感表达，C型容易只关注"做得对不对"'],
+};
+
+// ═════════════════════════════════════════
+// 生成报告
+// ═════════════════════════════════════════
+
+function generateReport() {
+  // 验证教养方式题答完
+  const scaleAnswered = answers.parentingScale.filter(a=>a).length;
+  const behaviorAnswered = answers.parentingBehavior.filter(a=>a).length;
+  if (scaleAnswered < 10 || behaviorAnswered < 10) {
+    const alert = document.getElementById('alert');
+    alert.classList.add('show');
+    setTimeout(()=>alert.classList.remove('show'),3000);
+    window.scrollTo(0,0);
+    return;
+  }
+
+  updateProgress(4);
+
+  // 计算
+  const parentDisc = calcParentDisc();
+  const childDisc = calcChildDisc();
+  const parenting = calcParenting();
+  const match = calcMatch(parentDisc.type, childDisc.type, parentDisc.type, parenting.type);
+
+  // 生成HTML
+  const pDisc = discLabels[parentDisc.type];
+  const cDisc = discLabels[childDisc.type];
+  const pType = parentingLabels[parenting.type];
+  const matchL = scoreLevel(match.matchScore);
+  const consistL = scoreLevel(match.consistencyScore);
+  const totalL = totalLevel(match.totalScore);
+  const talk = matchTalk[parenting.type][childDisc.type];
+  const consistTalkText = consistencyTalk[parentDisc.type][parenting.type];
+
+  let html = '';
+
+  // 1. 家庭画像总览
+  html += `<div class="report-card">
+    <h3>一、家庭画像总览</h3>
+    <div class="profile-boxes">
+      <div class="profile-box">
+        <div class="label">👩 家长 DISC</div>
+        <div class="value">${pDisc.emoji} ${pDisc.name}</div>
+        <div class="label" style="margin-top:6px;font-size:11px">${pDisc.desc}</div>
+      </div>
+      <div class="profile-box">
+        <div class="label">👦 孩子 DISC</div>
+        <div class="value">${cDisc.emoji} ${cDisc.name}</div>
+        <div class="label" style="margin-top:6px;font-size:11px">${cDisc.desc}</div>
+      </div>
+    </div>
+    <div class="profile-box" style="margin-bottom:16px">
+      <div class="label">📋 教养方式</div>
+      <div class="value">${pType.name}</div>
+      <div class="label" style="margin-top:6px;font-size:11px">${pType.desc}</div>
+      ${parenting.edge ? '<div style="color:#f59e0b;font-size:11px;margin-top:4px">⚠️ 边缘型（R或D在3.0-3.5之间）</div>' : ''}
+      ${parenting.mismatch ? `<div style="color:#f59e0b;font-size:11px;margin-top:4px">⚠️ 行为倾向偏${parentingLabels[parenting.behaviorType].name}</div>` : ''}
+    </div>
+    <div class="score-item">
+      <div class="score-label">① 教养匹配度（${pType.name} × ${cDisc.name}）</div>
+      <div style="display:flex;align-items:center;gap:10px"><div class="score-bar-bg" style="flex:1"><div class="score-bar-fill ${matchL.color}" style="width:${match.matchScore}%">${match.matchScore}/100</div></div></div>
+      <div style="font-size:12px;margin-top:2px">${matchL.label}</div>
+    </div>
+    <div class="score-item">
+      <div class="score-label">② 知行一致度（${pDisc.name} × ${pType.name}）</div>
+      <div style="display:flex;align-items:center;gap:10px"><div class="score-bar-bg" style="flex:1"><div class="score-bar-fill ${consistL.color}" style="width:${match.consistencyScore}%">${match.consistencyScore}/100</div></div></div>
+      <div style="font-size:12px;margin-top:2px">${consistL.label}</div>
+    </div>
+    <div class="score-item">
+      <div class="score-label">③ 综合总评</div>
+      <div style="display:flex;align-items:center;gap:10px"><div class="score-bar-bg" style="flex:1"><div class="score-bar-fill ${totalL.color}" style="width:${match.totalScore}%">${match.totalScore}/100</div></div></div>
+      <div style="font-size:12px;margin-top:2px">${totalL.label}</div>
+    </div>
+  </div>`;
+
+  // 2. 教养匹配度分析
+  html += `<div class="report-card">
+    <h3>二、教养匹配度分析</h3>
+    <p class="analysis-text"><b>你的教养类型：</b>${pType.name}<br><b>孩子的性格类型：</b>${cDisc.name}<br><b>匹配度评分：</b>${match.matchScore}/100　${matchL.label}</p>
+    <p class="analysis-text"><b>🔍 匹配分析</b><br>${talk.analysis}</p>
+    <p class="analysis-text"><b>⚠️ 典型冲突场景</b></p><ul style="list-style:none;padding-left:0">`;
+  talk.conflicts.forEach(c => { html += `<li style="padding:4px 0 4px 16px;position:relative;font-size:13px"><span style="position:absolute;left:0;color:#ef4444">▶</span>${c}</li>`; });
+  html += `</ul>
+    <p class="analysis-text"><b>💡 为什么会产生这些冲突</b><br>这不是孩子"不听话"或你"不会管"的问题，而是<b>你的教养方式和孩子性格之间的"不匹配"</b>。不同性格的孩子需要不同的沟通方式——同样的方法，对一种孩子有效，对另一种孩子可能适得其反。</p>
+  </div>`;
+
+  // 3. 知行一致度分析
+  html += `<div class="report-card">
+    <h3>三、知行一致度分析</h3>
+    <p class="analysis-text"><b>你的 DISC 类型：</b>${pDisc.name}<br><b>你的教养方式：</b>${pType.name}<br><b>一致度评分：</b>${match.consistencyScore}/100</p>
+    <p class="analysis-text"><b>🔍 分析</b><br>${consistTalkText}</p>
+    <p class="analysis-text"><b>💡 你的"知行陷阱"</b><br>道理都懂，一急就原形毕露——这是因为你的<b>性格本能</b>和<b>你想做的教养方式</b>之间存在张力。知道这个陷阱，才能有意识地避开它。</p>
+  </div>`;
+
+  // 4. 3个调整建议
+  html += `<div class="report-card">
+    <h3>四、3个立即可做的调整</h3>`;
+  talk.advice.forEach((a,i) => {
+    html += `<div class="advice-item"><b>调整${i+1}：</b>${a}</div>`;
+  });
+  html += `<p class="analysis-text" style="margin-top:12px"><b>📌 给你的性格建议</b></p><ul style="list-style:none;padding-left:0">`;
+  discParentAdvice[parentDisc.type].forEach(a => {
+    html += `<li style="padding:4px 0 4px 16px;position:relative;font-size:13px"><span style="position:absolute;left:0;color:#10b981">✓</span>${a}</li>`;
+  });
+  html += `</ul></div>`;
+
+  // 5. 7天行动计划
+  html += `<div class="report-card">
+    <h3>五、7天行动计划</h3>`;
+  talk.plan.forEach((p,i) => {
+    html += `<div class="day-plan"><div class="day">Day${i+1}</div><div>${p}</div></div>`;
+  });
+  html += `</div>`;
+
+  // 6. 升单引导
+  html += `<div class="upsell">
+    <h3>🎯 想深入解决？</h3>
+    <p>这份报告帮你看到了<b>"问题在哪"</b>。<br>如果你想知道<b>"具体怎么做"</b>，欢迎加入：</p>
+    <div class="price">📚 家庭教育全维指导营 ¥1,999</div>
+    <p style="font-size:12px">8周深度陪跑 · DISC+教养方式+天赋测评全维度<br>针对你的家庭类型，定制教养方案</p>
+    <a href="${COURSE_LINKS.course1999}" target="_blank" style="display:block;width:100%;padding:12px;background:#10b981;color:#fff;text-align:center;border-radius:8px;font-size:15px;font-weight:700;text-decoration:none;margin-top:8px">立即报名 ¥1,999 →</a>
+    <div class="price" style="margin-top:20px">👑 1对1家庭私教 ¥12,800</div>
+    <p style="font-size:12px">3个月深度陪伴 · 个性化方案 · 随时答疑<br>夫妻双轨指导</p>
+    <a href="${COURSE_LINKS.wechatConsult}" target="_blank" style="display:block;width:100%;padding:12px;background:linear-gradient(90deg,#3b82f6,#a855f7);color:#fff;text-align:center;border-radius:8px;font-size:15px;font-weight:700;text-decoration:none;margin-top:8px">扫码添加微信，咨询私教方案 →</a>
+    <p style="margin-top:16px;font-size:12px;color:#94a3b8">还没准备好？先从99元DISC亲子诊断课开始 →</p>
+    <a href="${COURSE_LINKS.course99}" target="_blank" style="display:block;width:100%;padding:10px;background:#1e293b;color:#f59e0b;text-align:center;border-radius:8px;font-size:14px;font-weight:600;text-decoration:none;border:1px solid #f59e0b;margin-top:4px">体验99元DISC诊断课 →</a>
+  </div>`;
+
+  document.getElementById('reportContent').innerHTML = html;
+  document.getElementById('reportDate').textContent = '测评日期：' + new Date().toLocaleDateString('zh-CN');
+
+  // 隐藏答题区，显示报告
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.querySelector('.progress-bar').style.display = 'none';
+  document.querySelector('.progress-text').style.display = 'none';
+  document.getElementById('report').style.display = 'block';
+  window.scrollTo(0,0);
+}
+
+// ═════════════════════════════════════════
+// 初始化
+// ═════════════════════════════════════════
+renderParentDisc();
+renderChildDisc();
+renderParenting();
+updateProgress(1);
+</script>
+</body>
+</html>
