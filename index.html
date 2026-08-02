@@ -813,10 +813,7 @@ function exportAllReports() {
     csv += i+1 + ',' + d.toLocaleDateString('zh-CN') + ' ' + d.toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit'}) + ',' + pDisc.name + ',' + cDisc.name + ',' + pType.name + ',' + r.match.matchScore + ',' + r.match.consistencyScore + ',' + r.match.totalScore + ',' + totalL.label.replace(/[🟢🟡🟠🔴 ]/g,'') + '\n';
   });
 
-  // 生成JSON数据
-  const jsonData = JSON.stringify(reports, null, 2);
-
-  // 弹窗——只有按钮，不显示代码
+  // 弹窗——只有下载和复制按钮
   const overlay = document.getElementById('reportDetailOverlay');
   const box = document.getElementById('reportDetailBox');
   box.innerHTML = '';
@@ -824,23 +821,22 @@ function exportAllReports() {
   const wrap = document.createElement('div');
   wrap.style.cssText = 'text-align:center;padding:30px 10px';
 
-  // 标题
   const h2 = document.createElement('h2');
   h2.textContent = '📥 导出全部数据';
   h2.style.cssText = 'color:#f59e0b;margin-bottom:8px';
   wrap.appendChild(h2);
 
   const p1 = document.createElement('p');
-  p1.textContent = '共 ' + reports.length + ' 份报告，点击下方按钮下载';
+  p1.textContent = '共 ' + reports.length + ' 份报告';
   p1.style.cssText = 'color:#94a3b8;font-size:13px;margin-bottom:24px';
   wrap.appendChild(p1);
 
-  // CSV下载按钮（主推，Excel可打开）
+  // CSV下载按钮
   const csvBtn = document.createElement('button');
   csvBtn.textContent = '📊 下载 CSV 表格（Excel可打开）';
   csvBtn.style.cssText = 'width:100%;padding:16px;background:#3b82f6;color:#fff;border:none;border-radius:10px;font-size:16px;font-weight:700;cursor:pointer;margin-bottom:12px';
   csvBtn.onclick = function() {
-    const blob = new Blob(['\uFEFF' + csv], {type: 'text/csv;charset=utf-8'});
+    const blob = new Blob([csv], {type: 'text/csv;charset=utf-8'});
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
@@ -855,35 +851,10 @@ function exportAllReports() {
   };
   wrap.appendChild(csvBtn);
 
-  // JSON下载按钮（备份数据用）
-  const jsonBtn = document.createElement('button');
-  jsonBtn.textContent = '📄 下载 JSON 备份文件';
-  jsonBtn.style.cssText = 'width:100%;padding:14px;background:#10b981;color:#fff;border:none;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer;margin-bottom:12px';
-  jsonBtn.onclick = function() {
-    const blob = new Blob([jsonData], {type: 'application/json'});
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = '测评报告数据.json';
-    a.style.display = 'none';
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    setTimeout(function(){ URL.revokeObjectURL(url); }, 2000);
-    jsonBtn.textContent = '✅ JSON已下载';
-    setTimeout(function(){ jsonBtn.textContent = '📄 下载 JSON 备份文件'; }, 2000);
-  };
-  wrap.appendChild(jsonBtn);
-
-  // 如果下载不成功，显示复制按钮
-  const tip = document.createElement('p');
-  tip.textContent = '如果下载没有反应，点这里复制数据：';
-  tip.style.cssText = 'color:#64748b;font-size:12px;margin-top:16px;margin-bottom:8px';
-  wrap.appendChild(tip);
-
+  // 复制按钮（备用）
   const copyBtn = document.createElement('button');
-  copyBtn.textContent = '📋 复制 CSV 数据到剪贴板';
-  copyBtn.style.cssText = 'width:100%;padding:10px;background:#1e293b;color:#94a3b8;border:1px solid #2a2f45;border-radius:8px;font-size:13px;cursor:pointer;margin-bottom:12px';
+  copyBtn.textContent = '📋 复制数据到剪贴板';
+  copyBtn.style.cssText = 'width:100%;padding:12px;background:#1e293b;color:#94a3b8;border:1px solid #2a2f45;border-radius:10px;font-size:14px;cursor:pointer;margin-bottom:12px';
   copyBtn.onclick = function() {
     const ta = document.createElement('textarea');
     ta.value = csv;
@@ -893,7 +864,7 @@ function exportAllReports() {
     try { document.execCommand('copy'); } catch(e) {}
     document.body.removeChild(ta);
     copyBtn.textContent = '✅ 已复制，可粘贴到Excel';
-    setTimeout(function(){ copyBtn.textContent = '📋 复制 CSV 数据到剪贴板'; }, 2000);
+    setTimeout(function(){ copyBtn.textContent = '📋 复制数据到剪贴板'; }, 2000);
   };
   wrap.appendChild(copyBtn);
 
