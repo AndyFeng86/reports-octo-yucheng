@@ -770,7 +770,7 @@ function viewReportDetail(index) {
   html += `<div class="upsell"><h3>🎯 想要更深入的指导？</h3><p>这份报告帮你看到了<b>"问题在哪"</b>。<br>如果你想知道<b>"具体怎么做"</b>，欢迎添加微信咨询：</p><img src="${COURSE_LINKS.wechatConsult}" alt="微信二维码" style="width:200px;height:200px;margin:16px auto;display:block;border-radius:8px;border:2px solid #f59e0b"><p style="font-size:12px;color:#94a3b8">扫码添加微信，获取一对一咨询</p></div>`;
 
   // 导出按钮
-  html += `<button class="btn btn-export" onclick="exportSingleReport(${index})">📥 导出此报告PDF</button>`;
+  html += `<button class="btn btn-export" onclick="exportSingleReport(event,${index})">📥 导出此报告PDF</button>`;
 
   const box = document.getElementById('reportDetailBox');
   box.innerHTML = html;
@@ -800,18 +800,71 @@ function exportAllReports() {
   let reports = [];
   try { reports = JSON.parse(localStorage.getItem('familyDiagnosisReports') || '[]'); } catch(e) {}
   if (reports.length === 0) { alert('暂无报告可导出'); return; }
-  const dataStr = JSON.stringify(reports, null, 2);
-  const blob = new Blob([dataStr], {type: 'application/json'});
+
+  // 生成CSV格式（更兼容，Excel可打开）
+  let csv = '\uFEFF'; // BOM for UTF-8
+  csv += '序号,日期,家长性格,孩子性格,教养方式,匹配度,一致度,综合得分,评级\n';
+  reports.forEach((r, i) => {
+    const d = new Date(r.date);
+    const pDisc = discLabels[r.parentDiscResult.type];
+    const cDisc = discLabels[r.childDiscResult.type];
+    const pType = parentingLabels[r.parentingResult.type];
+    const totalL = totalLevel(r.match.totalScore);
+    csv += `${i+1},${d.toLocaleDateString('zh-CN')} ${d.toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit'})},${pDisc.emoji} ${pDisc.name},${cDisc.emoji} ${cDisc.name},${pType.name},${r.match.matchScore},${r.match.consistencyScore},${r.match.totalScore},${totalL.label.replace(/[🟢🟡🟠🔴 ]/g,'')}\n`;
+  });
+
+  // 生成JSON数据
+  const jsonData = JSON.stringify(reports, null, 2);
+
+  // 方式1: 尝试用Blob下载
+  const blob = new Blob([jsonData], {type: 'application/json'});
   const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `测评报告数据_${new Date().toLocaleDateString('zh-CN')}.json`;
-  a.click();
-  URL.revokeObjectURL(url);
+
+  // 方式2: 生成data URI作为备用
+  const dataUri = 'data:application/json;charset=utf-8,' + encodeURIComponent(jsonData);
+
+  // 方式3: 生成CSV data URI
+  const csvUri = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv);
+
+  // 先尝试Blob下载
+  let downloaded = false;
+  try {
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `测评报告数据_${new Date().toLocaleDateString('zh-CN')}.json`;
+    a.style.display = 'none';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    downloaded = true;
+  } catch(e) {
+    console.log('Blob下载失败，尝试备用方案', e);
+  }
+
+  // 如果Blob下载失败，显示一个弹窗让用户选择下载方式
+  if (!downloaded) {
+    const overlay = document.getElementById('reportDetailOverlay');
+    const box = document.getElementById('reportDetailBox');
+    box.innerHTML = `
+      <div style="text-align:center;padding:30px 10px">
+        <h2 style="color:#f59e0b;margin-bottom:16px">📥 导出全部数据</h2>
+        <p style="color:#94a3b8;font-size:13px;margin-bottom:20px">共 ${reports.length} 份报告</p>
+
+        <a href="${dataUri}" download="测评报告数据.json" style="display:block;width:100%;padding:14px;background:#10b981;color:#fff;text-align:center;border-radius:10px;font-size:15px;font-weight:700;text-decoration:none;margin-bottom:10px">📄 下载JSON格式</a>
+
+        <a href="${csvUri}" download="测评报告数据.csv" style="display:block;width:100%;padding:14px;background:#3b82f6;color:#fff;text-align:center;border-radius:10px;font-size:15px;font-weight:700;text-decoration:none;margin-bottom:10px">📊 下载CSV格式（Excel可打开）</a>
+
+        <button onclick="closeReportDetail()" style="width:100%;padding:12px;background:#1e293b;color:#94a3b8;border:1px solid #2a2f45;border-radius:10px;font-size:14px;cursor:pointer;margin-top:10px">关闭</button>
+      </div>`;
+    overlay.classList.add('active');
+    document.body.style.overflow = 'hidden';
+  }
 }
 
 // 导出单个报告PDF
-function exportSingleReport(index) {
+function exportSingleReport(event, index) {
+  event.stopPropagation();
   const box = document.getElementById('reportDetailBox');
   if (typeof html2canvas !== 'undefined' && typeof window.jspdf !== 'undefined') {
     const btn = event.target;
