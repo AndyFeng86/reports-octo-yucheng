@@ -339,6 +339,17 @@ function exportPDF() {
 
 <script>
 // ═════════════════════════════════════════
+// Cloudflare Worker 云同步配置
+// 部署 Worker 后，将下方 URL 替换为你的 Worker 地址
+// ═════════════════════════════════════════
+const CLOUD_API = {
+  // ★★★ 部署 Worker 后，把下面这行改成你的 Worker 地址 ★★★
+  baseURL: 'https://family-diagnosis.YOUR-SUBDOMAIN.workers.dev',
+  // 例如：'https://family-diagnosis.andyfeng.workers.dev'
+  enabled: false, // 部署 Worker 后改为 true
+};
+
+// ═════════════════════════════════════════
 // 题库数据（与主系统一致）
 // ═════════════════════════════════════════
 const parentDiscQuestions = [
@@ -600,9 +611,10 @@ function generateReport() {
   document.getElementById('report').style.display = 'block';
   window.scrollTo(0,0);
 
-  // 保存到localStorage
+  // 保存到localStorage + 上传到云端
   const reportData = {parentDisc:answers.parentDisc,childDisc:answers.childDisc,parentingScale:answers.parentingScale,parentingBehavior:answers.parentingBehavior,parentDiscResult:parentDisc,childDiscResult:childDisc,parentingResult:parenting,match:match,date:new Date().toISOString()};
   saveReportToStorage(reportData);
+  uploadReportToCloud(reportData);
 }
 
 function saveReportToStorage(data) {
@@ -611,6 +623,68 @@ function saveReportToStorage(data) {
   reports.unshift(data);
   if (reports.length > 50) reports = reports.slice(0, 50); // 保留最近50份
   localStorage.setItem('familyDiagnosisReports', JSON.stringify(reports));
+}
+
+// ═════════════════════════════════════════
+// 云同步：上传报告到 Cloudflare Worker
+// ═════════════════════════════════════════
+async function uploadReportToCloud(reportData) {
+  if (!CLOUD_API.enabled) return; // 未启用则跳过
+  try {
+    const resp = await fetch(CLOUD_API.baseURL + '/api/reports', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(reportData)
+    });
+    const result = await resp.json();
+    if (result.success) {
+      console.log('☁️ 报告已同步到云端，ID:', result.id);
+    } else {
+      console.warn('⚠️ 云端同步失败:', result.error);
+    }
+  } catch(e) {
+    console.warn('⚠️ 云端连接失败（网络问题，数据已保存在本地）:', e.message);
+    // 静默失败，不影响用户体验
+  }
+}
+
+// 从云端拉取报告列表
+async function fetchReportsFromCloud() {
+  if (!CLOUD_API.enabled) return [];
+  try {
+    const resp = await fetch(CLOUD_API.baseURL + '/api/reports');
+    const data = await resp.json();
+    if (data.reports && Array.isArray(data.reports)) {
+      console.log('☁️ 从云端拉取到', data.reports.length, '份报告');
+      return data.reports;
+    }
+  } catch(e) {
+    console.warn('⚠️ 云端拉取失败:', e.message);
+  }
+  return [];
+}
+
+// 合并本地和云端报告（去重，以日期+内容为唯一标识）
+function mergeReports(localReports, cloudReports) {
+  const merged = [...localReports];
+  const seen = new Set();
+  // 标记本地已有的报告（用日期+匹配度+类型组合做指纹）
+  merged.forEach(r => {
+    const fp = r.date + '|' + r.match.totalScore + '|' + r.parentDiscResult.type + r.childDiscResult.type + r.parentingResult.type;
+    seen.add(fp);
+  });
+  // 添加云端独有的报告
+  cloudReports.forEach(r => {
+    const fp = r.date + '|' + r.match.totalScore + '|' + r.parentDiscResult.type + r.childDiscResult.type + r.parentingResult.type;
+    if (!seen.has(fp)) {
+      merged.push(r);
+      seen.add(fp);
+    }
+  });
+  // 按日期降序
+  merged.sort((a, b) => new Date(b.date) - new Date(a.date));
+  // 限制最多50份
+  return merged.slice(0, 50);
 }
 
 // ═════════════════════════════════════════
@@ -667,42 +741,62 @@ function toggleCollapsible(header) {
   arrow.textContent = body.classList.contains('show') ? '▴' : '▾';
 }
 
-// 加载报告列表
-function loadReportList() {
+// 加载报告列表（从本地 + 云端合并）
+async function loadReportList() {
   const container = document.getElementById('reportList');
-  let reports = [];
-  try { reports = JSON.parse(localStorage.getItem('familyDiagnosisReports') || '[]'); } catch(e) {}
+  container.innerHTML = '<div class="empty-tip">⏳ 正在加载报告...</div>';
+
+  let localReports = [];
+  try { localReports = JSON.parse(localStorage.getItem('familyDiagnosisReports') || '[]'); } catch(e) {}
+
+  // 从云端拉取
+  let cloudReports = [];
+  if (CLOUD_API.enabled) {
+    cloudReports = await fetchReportsFromCloud();
+  }
+
+  // 合并去重
+  const reports = mergeReports(localReports, cloudReports);
+
+  // 更新本地存储
+  if (cloudReports.length > 0) {
+    localStorage.setItem('familyDiagnosisReports', JSON.stringify(reports));
+  }
 
   if (reports.length === 0) {
-    container.innerHTML = '<div class="empty-tip">📋 暂无测评报告<br><br>家长完成测评后，报告会自动出现在这里</div>';
+    container.innerHTML = '<div class="empty-tip">📋 暂无测评报告<br><br>家长完成测评后，报告会自动出现在这里<br><br><small style="color:#64748b">💡 提示：确保已部署云同步服务，否则只能看到本设备上的报告</small></div>';
     return;
   }
 
-  let html = `<div style="font-size:13px;color:#94a3b8;margin-bottom:8px">共 <b style="color:#f59e0b">${reports.length}</b> 份报告（点击查看详情）</div>`;
+  const cloudCount = CLOUD_API.enabled ? cloudReports.length : 0;
+  let html = '<div style="font-size:13px;color:#94a3b8;margin-bottom:8px">共 <b style="color:#f59e0b">' + reports.length + '</b> 份报告';
+  if (CLOUD_API.enabled) {
+    html += '（本地 ' + localReports.length + ' 份 + 云端 ' + cloudCount + ' 份）';
+  }
+  html += ' · <span style="color:#10b981;font-size:12px">☁️ 云同步' + (CLOUD_API.enabled ? '已启用' : '未启用') + '</span></div>';
+
   reports.forEach((r, i) => {
     const d = new Date(r.date);
     const pDisc = discLabels[r.parentDiscResult.type];
     const cDisc = discLabels[r.childDiscResult.type];
     const pType = parentingLabels[r.parentingResult.type];
-    const matchL = scoreLevel(r.match.matchScore);
-    const consistL = scoreLevel(r.match.consistencyScore);
     const totalL = totalLevel(r.match.totalScore);
 
-    html += `<div class="report-card-item" onclick="viewReportDetail(${i})">
-      <div class="rci-date">📅 ${d.toLocaleDateString('zh-CN')} ${d.toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit'})}</div>
-      <div class="rci-title">报告 #${i+1}</div>
-      <div class="rci-tags">
-        <span class="rci-tag disc-${r.parentDiscResult.type.toLowerCase()}">家长 ${pDisc.emoji} ${pDisc.name}</span>
-        <span class="rci-tag disc-${r.childDiscResult.type.toLowerCase()}">孩子 ${cDisc.emoji} ${cDisc.name}</span>
-        <span class="rci-tag parenting">${pType.name}</span>
-      </div>
-      <div class="rci-scores">
-        <span class="rci-score">匹配度: <b>${r.match.matchScore}</b></span>
-        <span class="rci-score">一致度: <b>${r.match.consistencyScore}</b></span>
-        <span class="rci-score">综合: <b>${r.match.totalScore}</b> ${totalL.label}</span>
-      </div>
-      <button class="rci-delete" onclick="deleteReport(event,${i})">✕</button>
-    </div>`;
+    html += '<div class="report-card-item" onclick="viewReportDetail(' + i + ')">' +
+      '<div class="rci-date">📅 ' + d.toLocaleDateString('zh-CN') + ' ' + d.toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit'}) + '</div>' +
+      '<div class="rci-title">报告 #' + (i+1) + '</div>' +
+      '<div class="rci-tags">' +
+        '<span class="rci-tag disc-' + r.parentDiscResult.type.toLowerCase() + '">家长 ' + pDisc.emoji + ' ' + pDisc.name + '</span>' +
+        '<span class="rci-tag disc-' + r.childDiscResult.type.toLowerCase() + '">孩子 ' + cDisc.emoji + ' ' + cDisc.name + '</span>' +
+        '<span class="rci-tag parenting">' + pType.name + '</span>' +
+      '</div>' +
+      '<div class="rci-scores">' +
+        '<span class="rci-score">匹配度: <b>' + r.match.matchScore + '</b></span>' +
+        '<span class="rci-score">一致度: <b>' + r.match.consistencyScore + '</b></span>' +
+        '<span class="rci-score">综合: <b>' + r.match.totalScore + '</b> ' + totalL.label + '</span>' +
+      '</div>' +
+      '<button class="rci-delete" onclick="deleteReport(event,' + i + ')">✕</button>' +
+    '</div>';
   });
   container.innerHTML = html;
 }
