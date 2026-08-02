@@ -801,8 +801,10 @@ function exportAllReports() {
   try { reports = JSON.parse(localStorage.getItem('familyDiagnosisReports') || '[]'); } catch(e) {}
   if (reports.length === 0) { alert('暂无报告可导出'); return; }
 
-  // 生成CSV格式（更兼容，Excel可打开）
-  let csv = '\uFEFF'; // BOM for UTF-8
+  // 生成JSON数据
+  const jsonData = JSON.stringify(reports, null, 2);
+  // 生成CSV格式（Excel可打开）
+  let csv = '\uFEFF';
   csv += '序号,日期,家长性格,孩子性格,教养方式,匹配度,一致度,综合得分,评级\n';
   reports.forEach((r, i) => {
     const d = new Date(r.date);
@@ -810,56 +812,34 @@ function exportAllReports() {
     const cDisc = discLabels[r.childDiscResult.type];
     const pType = parentingLabels[r.parentingResult.type];
     const totalL = totalLevel(r.match.totalScore);
-    csv += `${i+1},${d.toLocaleDateString('zh-CN')} ${d.toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit'})},${pDisc.emoji} ${pDisc.name},${cDisc.emoji} ${cDisc.name},${pType.name},${r.match.matchScore},${r.match.consistencyScore},${r.match.totalScore},${totalL.label.replace(/[🟢🟡🟠🔴 ]/g,'')}\n`;
+    csv += `${i+1},${d.toLocaleDateString('zh-CN')} ${d.toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit'})},${pDisc.name},${cDisc.name},${pType.name},${r.match.matchScore},${r.match.consistencyScore},${r.match.totalScore},${totalL.label.replace(/[🟢🟡🟠🔴 ]/g,'')}\n`;
   });
 
-  // 生成JSON数据
-  const jsonData = JSON.stringify(reports, null, 2);
-
-  // 方式1: 尝试用Blob下载
-  const blob = new Blob([jsonData], {type: 'application/json'});
-  const url = URL.createObjectURL(blob);
-
-  // 方式2: 生成data URI作为备用
-  const dataUri = 'data:application/json;charset=utf-8,' + encodeURIComponent(jsonData);
-
-  // 方式3: 生成CSV data URI
+  // 生成data URI链接（在企微内嵌浏览器中也能用）
+  const jsonUri = 'data:application/json;charset=utf-8,' + encodeURIComponent(jsonData);
   const csvUri = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv);
 
-  // 先尝试Blob下载
-  let downloaded = false;
-  try {
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `测评报告数据_${new Date().toLocaleDateString('zh-CN')}.json`;
-    a.style.display = 'none';
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    setTimeout(() => URL.revokeObjectURL(url), 1000);
-    downloaded = true;
-  } catch(e) {
-    console.log('Blob下载失败，尝试备用方案', e);
-  }
+  // 直接弹窗显示下载链接
+  const overlay = document.getElementById('reportDetailOverlay');
+  const box = document.getElementById('reportDetailBox');
+  box.innerHTML = `
+    <div style="text-align:center;padding:30px 10px">
+      <h2 style="color:#f59e0b;margin-bottom:8px">📥 导出全部数据</h2>
+      <p style="color:#94a3b8;font-size:13px;margin-bottom:20px">共 ${reports.length} 份报告，选择格式下载</p>
 
-  // 如果Blob下载失败，显示一个弹窗让用户选择下载方式
-  if (!downloaded) {
-    const overlay = document.getElementById('reportDetailOverlay');
-    const box = document.getElementById('reportDetailBox');
-    box.innerHTML = `
-      <div style="text-align:center;padding:30px 10px">
-        <h2 style="color:#f59e0b;margin-bottom:16px">📥 导出全部数据</h2>
-        <p style="color:#94a3b8;font-size:13px;margin-bottom:20px">共 ${reports.length} 份报告</p>
+      <a href="${jsonUri}" download="测评报告数据.json" style="display:block;width:100%;padding:14px;background:#10b981;color:#fff;text-align:center;border-radius:10px;font-size:15px;font-weight:700;text-decoration:none;margin-bottom:10px">📄 下载 JSON 格式</a>
 
-        <a href="${dataUri}" download="测评报告数据.json" style="display:block;width:100%;padding:14px;background:#10b981;color:#fff;text-align:center;border-radius:10px;font-size:15px;font-weight:700;text-decoration:none;margin-bottom:10px">📄 下载JSON格式</a>
+      <a href="${csvUri}" download="测评报告数据.csv" style="display:block;width:100%;padding:14px;background:#3b82f6;color:#fff;text-align:center;border-radius:10px;font-size:15px;font-weight:700;text-decoration:none;margin-bottom:10px">📊 下载 CSV 格式（Excel可打开）</a>
 
-        <a href="${csvUri}" download="测评报告数据.csv" style="display:block;width:100%;padding:14px;background:#3b82f6;color:#fff;text-align:center;border-radius:10px;font-size:15px;font-weight:700;text-decoration:none;margin-bottom:10px">📊 下载CSV格式（Excel可打开）</a>
+      <details style="margin-top:16px;text-align:left">
+        <summary style="font-size:13px;color:#94a3b8;cursor:pointer">📋 点击查看全部数据（可直接复制）</summary>
+        <textarea readonly style="width:100%;height:200px;margin-top:8px;background:#1e293b;border:1px solid #2a2f45;border-radius:6px;color:#94a3b8;padding:10px;font-size:11px;resize:vertical">${jsonData}</textarea>
+      </details>
 
-        <button onclick="closeReportDetail()" style="width:100%;padding:12px;background:#1e293b;color:#94a3b8;border:1px solid #2a2f45;border-radius:10px;font-size:14px;cursor:pointer;margin-top:10px">关闭</button>
-      </div>`;
-    overlay.classList.add('active');
-    document.body.style.overflow = 'hidden';
-  }
+      <button onclick="closeReportDetail()" style="width:100%;padding:12px;background:#1e293b;color:#94a3b8;border:1px solid #2a2f45;border-radius:10px;font-size:14px;cursor:pointer;margin-top:10px">关闭</button>
+    </div>`;
+  overlay.classList.add('active');
+  document.body.style.overflow = 'hidden';
 }
 
 // 导出单个报告PDF
