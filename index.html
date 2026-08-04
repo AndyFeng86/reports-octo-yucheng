@@ -169,6 +169,7 @@ h1{text-align:center;font-size:22px;margin:10px 0 4px;background:linear-gradient
 <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
 <script>
+// PDF导出：临时切换亮色主题 → html2canvas截图 → 生成PDF → 下载
 function exportPDF() {
   const report = document.querySelector('.report');
   if (!report || report.style.display === 'none') {
@@ -180,38 +181,167 @@ function exportPDF() {
   btn.textContent = '⏳ 正在生成PDF...';
   btn.disabled = true;
 
-  html2canvas(report, {
-    scale: 2,
-    backgroundColor: '#ffffff',
-    useCORS: true,
-    logging: false
-  }).then(canvas => {
-    const { jsPDF } = window.jspdf;
-    const imgData = canvas.toDataURL('image/jpeg', 0.95);
-    const pdf = new jsPDF('p', 'mm', 'a4');
-    const pdfWidth = pdf.internal.pageSize.getWidth();
-    const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
-    let heightLeft = pdfHeight;
-    let position = 0;
-    const pageHeight = pdf.internal.pageSize.getHeight();
+  // 创建一个临时容器，克隆报告内容，应用亮色主题
+  const printContainer = document.createElement('div');
+  printContainer.id = 'pdfPrintContainer';
+  printContainer.style.cssText = 'position:absolute;left:-9999px;top:0;width:680px;background:#ffffff;color:#1a1a2e;padding:20px;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif';
 
-    // Handle multi-page
-    while (heightLeft > 0) {
-      pdf.addImage(imgData, 'JPEG', 0, position, pdfWidth, pdfHeight);
-      heightLeft -= pageHeight;
-      position -= pageHeight;
-      if (heightLeft > 0) pdf.addPage();
-    }
-    pdf.save('家庭教养匹配诊断报告.pdf');
-    btn.textContent = origText;
-    btn.disabled = false;
-  }).catch(err => {
-    console.error(err);
-    // Fallback to window.print()
-    window.print();
-    btn.textContent = origText;
-    btn.disabled = false;
+  // 克隆报告内容
+  const clone = report.cloneNode(true);
+  // 移除导出按钮和重新测评按钮（不需要出现在PDF里）
+  clone.querySelectorAll('.btn-export, .btn-retry, .btn-send').forEach(function(el) { el.remove(); });
+
+  // 应用亮色样式覆盖
+  clone.querySelectorAll('.report-card').forEach(function(el) {
+    el.style.background = '#ffffff';
+    el.style.border = '1px solid #e2e8f0';
+    el.style.borderRadius = '12px';
+    el.style.padding = '20px';
+    el.style.marginBottom = '16px';
   });
+  clone.querySelectorAll('.report-card h3').forEach(function(el) {
+    el.style.color = '#1e40af';
+    el.style.borderBottom = '1px solid #e2e8f0';
+    el.style.paddingBottom = '8px';
+  });
+  clone.querySelectorAll('.report-header h2').forEach(function(el) {
+    el.style.color = '#d97706';
+  });
+  clone.querySelectorAll('.report-header p').forEach(function(el) {
+    el.style.color = '#64748b';
+  });
+  clone.querySelectorAll('.profile-box').forEach(function(el) {
+    el.style.background = '#f8fafc';
+    el.style.border = '1px solid #e2e8f0';
+  });
+  clone.querySelectorAll('.profile-box .label').forEach(function(el) {
+    el.style.color = '#64748b';
+  });
+  clone.querySelectorAll('.profile-box .value').forEach(function(el) {
+    el.style.color = '#d97706';
+  });
+  clone.querySelectorAll('.analysis-text').forEach(function(el) {
+    el.style.color = '#1e293b';
+  });
+  clone.querySelectorAll('.analysis-text b').forEach(function(el) {
+    el.style.color = '#d97706';
+  });
+  clone.querySelectorAll('.score-label').forEach(function(el) {
+    el.style.color = '#64748b';
+  });
+  clone.querySelectorAll('.score-bar-bg').forEach(function(el) {
+    el.style.background = '#f1f5f9';
+  });
+  clone.querySelectorAll('.advice-item').forEach(function(el) {
+    el.style.background = '#f8fafc';
+    el.style.border = '1px solid #e2e8f0';
+    el.style.color = '#1e293b';
+  });
+  clone.querySelectorAll('.advice-item b').forEach(function(el) {
+    el.style.color = '#059669';
+  });
+  clone.querySelectorAll('.day-plan').forEach(function(el) {
+    el.style.color = '#1e293b';
+  });
+  clone.querySelectorAll('.upsell').forEach(function(el) {
+    el.style.background = '#fffbeb';
+    el.style.border = '2px solid #f59e0b';
+  });
+  clone.querySelectorAll('.upsell p').forEach(function(el) {
+    el.style.color = '#475569';
+  });
+  clone.querySelectorAll('.upsell h3').forEach(function(el) {
+    el.style.color = '#d97706';
+  });
+  clone.querySelectorAll('ul li').forEach(function(el) {
+    el.style.color = '#1e293b';
+  });
+
+  printContainer.appendChild(clone);
+  document.body.appendChild(printContainer);
+
+  // 等待图片加载
+  setTimeout(function() {
+    html2canvas(printContainer, {
+      scale: 2,
+      backgroundColor: '#ffffff',
+      useCORS: true,
+      logging: false,
+      windowWidth: 720
+    }).then(function(canvas) {
+      // 移除临时容器
+      document.body.removeChild(printContainer);
+
+      var imgData = canvas.toDataURL('image/jpeg', 0.92);
+      var imgWidth = 210; // A4 宽度 mm
+      var pageHeight = 297; // A4 高度 mm
+      var imgHeight = (canvas.height * imgWidth) / canvas.width;
+
+      var pdf = new jsPDF('p', 'mm', 'a4');
+      var heightLeft = imgHeight;
+      var position = 0;
+
+      pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight);
+      heightLeft -= pageHeight;
+
+      while (heightLeft > 0) {
+        position = heightLeft - imgHeight;
+        pdf.addPage();
+        pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight);
+        heightLeft -= pageHeight;
+      }
+
+      // 尝试保存
+      try {
+        pdf.save('家庭教养匹配诊断报告.pdf');
+        btn.textContent = '✅ PDF已生成';
+        setTimeout(function() { btn.textContent = origText; btn.disabled = false; }, 2000);
+      } catch(e) {
+        console.warn('pdf.save失败，尝试Blob下载', e);
+        // 备用方案：用Blob下载
+        try {
+          var blob = pdf.output('blob');
+          var url = URL.createObjectURL(blob);
+          var a = document.createElement('a');
+          a.href = url;
+          a.download = '家庭教养匹配诊断报告.pdf';
+          a.style.display = 'none';
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          setTimeout(function() { URL.revokeObjectURL(url); }, 3000);
+          btn.textContent = '✅ PDF已生成';
+          setTimeout(function() { btn.textContent = origText; btn.disabled = false; }, 2000);
+        } catch(e2) {
+          console.error('Blob下载也失败', e2);
+          // 最终备用方案：在新窗口打开
+          var dataUrl = pdf.output('dataurlstring');
+          var newWin = window.open('');
+          if (newWin) {
+            newWin.document.write('<iframe src="' + dataUrl + '" style="width:100%;height:100%;border:none"></iframe>');
+            btn.textContent = origText;
+            btn.disabled = false;
+          } else {
+            // 弹窗也被拦截，提示用户截图保存
+            alert('当前浏览器不支持直接下载PDF\n\n建议：\n1. 尝试用浏览器自带截图功能保存\n2. 或点击「发送给导师」让导师导出');
+            // 把canvas转成图片让用户长按保存
+            var imgWin = window.open('');
+            if (imgWin) {
+              imgWin.document.write('<title>长按图片保存</title><body style="margin:0;background:#f0f0f0;text-align:center;padding:20px"><h3 style="font-family:sans-serif">长按下方图片保存为截图</h3><img src="' + canvas.toDataURL('image/jpeg', 0.92) + '" style="width:100%;max-width:680px"></body>');
+            }
+            btn.textContent = origText;
+            btn.disabled = false;
+          }
+        }
+      }
+    }).catch(function(err) {
+      console.error('html2canvas失败', err);
+      document.body.removeChild(printContainer);
+      alert('PDF生成失败，请尝试截图保存\n\n错误：' + err.message);
+      btn.textContent = origText;
+      btn.disabled = false;
+    });
+  }, 500); // 等待500ms让图片和样式加载
 }
 </script>
 </head>
