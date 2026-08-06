@@ -270,13 +270,16 @@ function exportPDF() {
       windowWidth: 720
     }).then(function(canvas) {
       // 移除临时容器
-      document.body.removeChild(printContainer);
+      if (printContainer && printContainer.parentNode) {
+        printContainer.parentNode.removeChild(printContainer);
+      }
 
       var imgData = canvas.toDataURL('image/jpeg', 0.92);
       var imgWidth = 210; // A4 宽度 mm
       var pageHeight = 297; // A4 高度 mm
       var imgHeight = (canvas.height * imgWidth) / canvas.width;
 
+      var { jsPDF } = window.jspdf;
       var pdf = new jsPDF('p', 'mm', 'a4');
       var heightLeft = imgHeight;
       var position = 0;
@@ -336,7 +339,9 @@ function exportPDF() {
       }
     }).catch(function(err) {
       console.error('html2canvas失败', err);
-      document.body.removeChild(printContainer);
+      if (printContainer && printContainer.parentNode) {
+        printContainer.parentNode.removeChild(printContainer);
+      }
       alert('PDF生成失败，请尝试截图保存\n\n错误：' + err.message);
       btn.textContent = origText;
       btn.disabled = false;
